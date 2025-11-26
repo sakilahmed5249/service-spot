@@ -4,6 +4,7 @@ import { AuthProvider } from './context/AuthContext';
 
 // Components
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
@@ -72,15 +73,8 @@ function App() {
             </Routes>
           </main>
           
-          {/* Footer */}
-          <footer className="bg-gray-800 text-white py-6 mt-12">
-            <div className="container mx-auto px-4 text-center">
-              <p>&copy; 2025 Service-Spot. All rights reserved.</p>
-              <p className="text-sm text-gray-400 mt-2">
-                Localized Service Discovery & Booking Platform
-              </p>
-            </div>
-          </footer>
+          {/* Enhanced Footer */}
+          <Footer />
         </div>
       </Router>
     </AuthProvider>

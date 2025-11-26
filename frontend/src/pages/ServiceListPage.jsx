@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search, MapPin, Star, Filter } from 'lucide-react';
+import { FaPhone, FaEnvelope, FaMapMarkerAlt, FaStar, FaStarHalfAlt, FaRegStar } from 'react-icons/fa';
+import { MdVerified, MdTrendingUp } from 'react-icons/md';
 import { providerAPI } from '../services/api';
 import { SERVICE_CATEGORIES, CITIES, formatCurrency } from '../utils/constants';
+import { getCategoryIcon } from '../utils/categoryIcons';
 
 const ServiceListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -72,24 +75,26 @@ const ServiceListPage = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-12">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Browse Services</h1>
-        <p className="text-gray-600">Find the perfect service provider for your needs</p>
+      <div className="mb-12 text-center">
+        <h1 className="text-5xl font-extrabold mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Browse Services</h1>
+        <p className="text-gray-600 text-xl">Discover trusted service providers near you</p>
       </div>
 
       {/* Filters */}
-      <div className="card mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Filter size={20} className="text-primary" />
-          <h2 className="text-lg font-semibold">Filters</h2>
+      <div className="card-gradient mb-12 shadow-xl">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="feature-icon !w-12 !h-12">
+            <Filter size={20} />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800">Find Your Perfect Service</h2>
         </div>
         
         <div className="grid md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              🔍 Search
             </label>
             <input
               type="text"
@@ -101,8 +106,8 @@ const ServiceListPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              City
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              📍 City
             </label>
             <select
               value={filters.city}
@@ -117,8 +122,8 @@ const ServiceListPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Category
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              🏷️ Category
             </label>
             <select
               value={filters.category}
@@ -137,72 +142,133 @@ const ServiceListPage = () => {
               onClick={clearFilters}
               className="btn-secondary w-full"
             >
-              Clear Filters
+              Clear All
             </button>
           </div>
         </div>
       </div>
 
       {/* Results Count */}
-      <div className="mb-4">
-        <p className="text-gray-600">
-          {loading ? 'Loading...' : `${providers.length} provider${providers.length !== 1 ? 's' : ''} found`}
+      <div className="mb-6 flex items-center justify-between">
+        <p className="text-gray-700 font-semibold text-lg">
+          {loading ? (
+            <span className="flex items-center gap-2">
+              <span className="inline-block w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></span>
+              Loading amazing services...
+            </span>
+          ) : (
+            <>
+              <span className="text-3xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                {providers.length}
+              </span>
+              <span className="ml-2">provider{providers.length !== 1 ? 's' : ''} found</span>
+            </>
+          )}
         </p>
       </div>
 
       {/* Provider List */}
       {loading ? (
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="card animate-pulse">
+              <div className="h-6 bg-gray-200 rounded w-3/4 mb-4"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-full mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+            </div>
+          ))}
         </div>
       ) : providers.length === 0 ? (
-        <div className="card text-center py-12">
-          <p className="text-gray-600 text-lg">No providers found matching your criteria</p>
-          <button onClick={clearFilters} className="btn-primary mt-4">
-            Clear Filters
+        <div className="card-gradient text-center py-16 shadow-xl">
+          <div className="text-6xl mb-4">🔍</div>
+          <p className="text-gray-700 text-2xl font-bold mb-4">No providers found</p>
+          <p className="text-gray-600 mb-6">Try adjusting your filters to see more results</p>
+          <button onClick={clearFilters} className="btn-primary">
+            Clear All Filters
           </button>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {providers.map((provider) => (
-            <Link
-              key={provider.id}
-              to={`/providers/${provider.id}`}
-              className="card hover:shadow-xl transition-shadow"
-            >
-              {/* Provider Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold mb-1">{provider.name}</h3>
-                  <div className="flex items-center text-gray-600 text-sm mb-2">
-                    <MapPin size={14} className="mr-1" />
-                    {provider.city}, {provider.state}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {providers.map((provider, index) => {
+            const { Icon, color, bg } = getCategoryIcon(provider.category || 'Other');
+            return (
+              <Link
+                key={provider.id}
+                to={`/providers/${provider.id}`}
+                className="card-gradient group hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-2xl"
+                style={{ animationDelay: `${index * 100}ms` }}
+              >
+                {/* Provider Header with Avatar */}
+                <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center text-white shadow-lg relative`}>
+                      <Icon className="text-3xl" />
+                      {provider.isOnline && (
+                        <div className="absolute -top-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-white"></div>
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-xl font-black text-gray-800 group-hover:text-purple-600 transition-colors">{provider.name}</h3>
+                        {provider.isVerified && (
+                          <MdVerified className="text-blue-600 text-xl" title="Verified Provider" />
+                        )}                      </div>
+                      <div className="flex items-center text-gray-600 text-sm mt-1">
+                        <FaMapMarkerAlt className="mr-1 text-red-500" />
+                        {provider.city}, {provider.state}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Address */}
-              <p className="text-gray-600 text-sm mb-3">
-                {provider.doorNo}, {provider.addressLine}
-              </p>
-
-              {/* Contact */}
-              <div className="text-sm text-gray-600 mb-3">
-                <p>📧 {provider.email}</p>
-                <p>📱 {provider.phone}</p>
-              </div>
-
-              {/* Rating (Mock for now) */}
-              <div className="flex items-center justify-between pt-3 border-t">
-                <div className="flex items-center">
-                  <Star size={16} className="text-yellow-400 fill-current mr-1" />
-                  <span className="font-semibold">4.5</span>
-                  <span className="text-gray-500 text-sm ml-1">(12 reviews)</span>
+                {/* Address */}
+                <div className="bg-white/50 rounded-xl p-3 mb-3">
+                  <p className="text-gray-700 text-sm font-medium flex items-start gap-2">
+                    <MapPin size={16} className="text-purple-600 mt-0.5 flex-shrink-0" />
+                    <span>{provider.doorNo}, {provider.addressLine}</span>
+                  </p>
                 </div>
-                <span className="text-primary font-semibold">View Details →</span>
-              </div>
-            </Link>
-          ))}
+
+                {/* Contact */}
+                <div className="text-sm text-gray-700 mb-4 space-y-2">
+                  <p className="flex items-center gap-2 hover:text-blue-600 transition-colors">
+                    <FaEnvelope className="text-blue-500" />
+                    <span className="truncate">{provider.email}</span>
+                  </p>
+                  <p className="flex items-center gap-2 hover:text-green-600 transition-colors">
+                    <FaPhone className="text-green-500" />
+                    <span>{provider.phone}</span>
+                  </p>
+                </div>
+
+                {/* Rating & CTA */}
+                <div className="flex items-center justify-between pt-4 border-t-2 border-purple-100">
+                  <div className="flex items-center gap-2">
+                    {typeof provider.rating === 'number' && provider.reviewCount > 0 ? (
+                      <>
+                        <div className="flex">
+                          {[...Array(5)].map((_, i) => (
+                            <FaStar
+                              key={i}
+                              className={`text-lg ${i < Math.floor(provider.rating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                            />
+                          ))}
+                        </div>
+                        <span className="font-bold text-gray-800">{provider.rating.toFixed(1)}</span>
+                        <span className="text-gray-500 text-sm">({provider.reviewCount})</span>
+                      </>
+                    ) : (
+                      <span className="text-gray-500 text-sm">No reviews yet</span>
+                    )}
+                  </div>
+                  <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent font-black group-hover:scale-110 transition-transform inline-block">
+                    View →
+                  </span>
+                </div>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

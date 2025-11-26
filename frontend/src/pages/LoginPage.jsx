@@ -53,50 +53,51 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4">
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center py-12 px-4 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <div className="max-w-md w-full">
-        <div className="card">
+        <div className="card-glass shadow-2xl">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="bg-primary text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="feature-icon mx-auto mb-4">
               <LogIn size={32} />
             </div>
-            <h2 className="text-3xl font-bold">Welcome Back</h2>
-            <p className="text-gray-600 mt-2">Sign in to your account</p>
+            <h2 className="text-4xl font-extrabold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Welcome Back</h2>
+            <p className="text-gray-600 mt-2 text-lg">Sign in to continue your journey</p>
           </div>
 
           {/* User Type Toggle */}
-          <div className="flex gap-2 mb-6">
+          <div className="flex gap-3 mb-8 p-1 bg-gray-100 rounded-xl">
             <button
               type="button"
               onClick={() => setUserType('customer')}
-              className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center ${
+              className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center ${
                 userType === 'customer'
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
+                  : 'bg-transparent text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <User size={18} className="mr-2" />
+              <User size={20} className="mr-2" />
               Customer
             </button>
             <button
               type="button"
               onClick={() => setUserType('provider')}
-              className={`flex-1 py-3 rounded-lg font-semibold transition flex items-center justify-center ${
+              className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center ${
                 userType === 'provider'
-                  ? 'bg-primary text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
+                  : 'bg-transparent text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <Briefcase size={18} className="mr-2" />
+              <Briefcase size={20} className="mr-2" />
               Provider
             </button>
           </div>
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-              {error}
+            <div className="bg-red-50 border-2 border-red-200 text-red-700 px-5 py-4 rounded-xl mb-6 flex items-start gap-3 animate-slide-in-up shadow-md">
+              <span className="text-red-500 font-bold text-xl">⚠️</span>
+              <span className="font-medium">{error}</span>
             </div>
           )}
 
@@ -144,14 +145,16 @@ const LoginPage = () => {
           </form>
 
           {/* Footer */}
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
+          <div className="mt-8 text-center">
+            <p className="text-gray-600 text-lg">
               Don't have an account?{' '}
               <Link
                 to={`/signup?type=${userType}`}
-                className="text-primary font-semibold hover:underline"
+                className="font-bold text-blue-700 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 hover:text-purple-700 visited:text-blue-900 transition-colors duration-200 underline-offset-2 hover:underline"
+                style={{ WebkitBackgroundClip: 'text', backgroundClip: 'text', color: '#1D4ED8' }}
+                aria-label="Sign up for a new account"
               >
-                Sign Up
+                Sign Up Now
               </Link>
             </p>
           </div>

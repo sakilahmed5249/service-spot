@@ -1,12 +1,41 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, Star, TrendingUp, Shield, Clock } from 'lucide-react';
-import { SERVICE_CATEGORIES, CITIES } from '../utils/constants';
+import { Search, MapPin, ArrowRight, TrendingUp } from 'lucide-react';import { SERVICE_CATEGORIES, CITIES } from '../utils/constants';
+import { getCategoryIcon } from '../utils/categoryIcons';
+import ImageSlider from '../components/ImageSlider';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const [searchCity, setSearchCity] = useState('');
   const [searchCategory, setSearchCategory] = useState('');
+
+  // Hero slider images
+  const heroImages = [
+    {
+      url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1200&auto=format&fit=crop',
+      alt: 'Professional Plumbing Services',
+      title: 'Expert Plumbing',
+      subtitle: 'Fast & Reliable Solutions'
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1200&auto=format&fit=crop',
+      alt: 'Electrical Services',
+      title: 'Certified Electricians',
+      subtitle: 'Safe & Professional'
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200&auto=format&fit=crop',
+      alt: 'Cleaning Services',
+      title: 'Premium Cleaning',
+      subtitle: 'Spotless Results'
+    },
+    {
+      url: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=1200&auto=format&fit=crop',
+      alt: 'Carpentry Services',
+      title: 'Skilled Carpenters',
+      subtitle: 'Quality Craftsmanship'
+    }
+  ];
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -19,147 +48,126 @@ const LandingPage = () => {
   const featuredCategories = SERVICE_CATEGORIES.slice(0, 8);
 
   return (
-    <div>
-      {/* Hero Section */}
-      <section className="bg-gradient-to-r from-primary to-secondary text-white py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-6">
-              Find Local Services Near You
+    <div className="bg-white">
+      {/* Hero Section - Clean and Simple with Image Slider */}
+      <section className="relative py-16 md:py-24 overflow-hidden">
+        {/* Background Image Slider */}
+        <div className="absolute inset-0 z-0">
+          <ImageSlider images={heroImages} />
+        </div>
+        
+        {/* Light Overlay for text readability */}
+        <div className="absolute inset-0 bg-white/80 z-[1]"></div>
+
+        {/* Gradient Overlay */}
+        {/* <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/50 to-black/60 z-[1]"></div> */}
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            {/* Main Heading */}
+            <h1 className="text-4xl md:text-6xl font-bold mb-4 text-gray-900 font-display">
+              Find Home <span className="text-primary">Service/Repair</span>
+              <br />Near You
             </h1>
-            <p className="text-xl mb-8 text-blue-100">
-              Connect with trusted service providers in your area. Book appointments instantly.
+            
+            <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
+              Explore Best Home Service & Repair near you
             </p>
 
-            {/* Search Form */}
-            <form onSubmit={handleSearch} className="bg-white rounded-lg shadow-lg p-4 flex flex-col md:flex-row gap-4">
-              <div className="flex-1">
+            {/* Enhanced Search Form */}
+            <form onSubmit={handleSearch} className="bg-white/95 backdrop-blur-sm p-6 flex flex-col md:flex-row gap-4 rounded-2xl shadow-2xl border border-white/50">
+              <div className="flex-1 relative group">
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-600 transition-colors" size={20} />
                 <select
                   value={searchCity}
                   onChange={(e) => setSearchCity(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white transition-all duration-300 appearance-none cursor-pointer font-medium"
                 >
-                  <option value="">Select City</option>
+                  <option value="">📍 Select City</option>
                   {CITIES.map((city) => (
                     <option key={city} value={city}>{city}</option>
                   ))}
                 </select>
               </div>
-              <div className="flex-1">
+              
+              <div className="flex-1 relative group">
+                <TrendingUp className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-600 transition-colors" size={20} />
                 <select
                   value={searchCategory}
                   onChange={(e) => setSearchCategory(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white transition-all duration-300 appearance-none cursor-pointer font-medium"
                 >
-                  <option value="">Select Service</option>
+                  <option value="">🔍 Select Service</option>
                   {SERVICE_CATEGORIES.map((category) => (
                     <option key={category} value={category}>{category}</option>
                   ))}
                 </select>
               </div>
-              <button type="submit" className="btn-primary flex items-center justify-center">
-                <Search size={20} className="mr-2" />
-                Search
+              
+              <button type="submit" className="btn-primary flex items-center justify-center gap-2 min-w-[140px]">
+                <Search size={20} />
+                <span className="font-bold">Search</span>
               </button>
             </form>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="py-16 bg-gray-50">
+      {/* Categories Section - Clean Grid */}
+      <section className="py-16 bg-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Why Choose Service-Spot?</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="card text-center">
-              <div className="bg-primary text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield size={32} />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Trusted Providers</h3>
-              <p className="text-gray-600">
-                All service providers are verified and reviewed by customers
-              </p>
-            </div>
-            <div className="card text-center">
-              <div className="bg-primary text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock size={32} />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Quick Booking</h3>
-              <p className="text-gray-600">
-                Book services in minutes with real-time availability
-              </p>
-            </div>
-            <div className="card text-center">
-              <div className="bg-primary text-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Star size={32} />
-              </div>
-              <h3 className="text-xl font-semibold mb-2">Quality Service</h3>
-              <p className="text-gray-600">
-                Read reviews and ratings before booking any service
-              </p>
-            </div>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 font-display mb-2">
+              Popular Businesses            </h2>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+            {featuredCategories.map((category) => {
+              const { Icon, color, bg } = getCategoryIcon(category);
+              return (
+                <Link
+                  key={category}
+                  to={`/services?category=${category}`}
+                  className="bg-white rounded-2xl p-6 hover:shadow-xl transition-shadow duration-300 border border-gray-100 text-center group"
+                >
+                  <div className={`${bg} w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-3`}>
+                    <Icon className="text-3xl" style={{ color: color.includes('from-') ? undefined : color }} />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 group-hover:text-primary transition-colors">
+                    {category}
+                  </h3>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>
 
-      {/* Categories Section */}
-      <section className="py-16">
+      {/* CTA Section - Simple and Clean */}
+      <section className="py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Popular Services</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            {featuredCategories.map((category) => (
-              <Link
-                key={category}
-                to={`/services?category=${category}`}
-                className="card hover:shadow-xl transition-shadow text-center group"
+          <div className="max-w-4xl mx-auto text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 font-display">
+              Are You a Service Provider?
+            </h2>
+            <p className="text-lg text-gray-600 mb-8">
+              Join our platform and grow your business
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link 
+                to="/signup?type=provider" 
+                className="bg-primary text-white px-8 py-3 rounded-full font-semibold hover:bg-primary-600 transition-colors inline-flex items-center justify-center gap-2"
               >
-                <div className="bg-blue-100 text-primary w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
-                  <TrendingUp size={32} />
-                </div>
-                <h3 className="font-semibold">{category}</h3>
+                Register as Provider
+                <ArrowRight size={20} />
               </Link>
-            ))}
-          </div>
-          <div className="text-center mt-8">
-            <Link to="/services" className="btn-primary">
-              View All Services
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="bg-primary text-white py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold mb-4">Are You a Service Provider?</h2>
-          <p className="text-xl mb-8 text-blue-100">
-            Join our platform and grow your business by reaching more customers
-          </p>
-          <Link to="/signup?type=provider" className="bg-white text-primary px-8 py-3 rounded-lg font-semibold hover:bg-gray-100 transition inline-block">
-            Register as Provider
-          </Link>
-        </div>
-      </section>
-
-      {/* Stats Section */}
-      <section className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-primary mb-2">1000+</div>
-              <div className="text-gray-600">Service Providers</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-primary mb-2">5000+</div>
-              <div className="text-gray-600">Happy Customers</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-primary mb-2">20+</div>
-              <div className="text-gray-600">Cities Covered</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-primary mb-2">15+</div>
-              <div className="text-gray-600">Service Categories</div>
+              <Link 
+                to="/services" 
+                className="bg-white text-primary border-2 border-primary px-8 py-3 rounded-full font-semibold hover:bg-primary-50 transition-colors inline-flex items-center justify-center gap-2"
+              >
+                Browse Services
+              </Link>
             </div>
           </div>
         </div>
