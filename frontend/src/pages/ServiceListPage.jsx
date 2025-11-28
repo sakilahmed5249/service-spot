@@ -189,7 +189,7 @@ export default function ServiceListPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <p className="text-sm text-slate-400">Results</p>
-              <div aria-live="polite" className="text-lg font-semibold text-slate-800">
+              <div aria-live="polite" className="text-lg font-semibold text-slate-800 dark:text-slate-200">
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
                     <span className="inline-block w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
@@ -218,13 +218,13 @@ export default function ServiceListPage() {
               ))}
             </div>
           ) : providers.length === 0 ? (
-            <div className="card-gradient p-8 text-center rounded-2xl">
+            <div className="rounded-2xl bg-slate-100 p-8 text-center dark:bg-slate-800/50">
               <div className="text-4xl mb-4">😕</div>
-              <h3 className="text-xl font-bold mb-2">No providers match your filters</h3>
-              <p className="text-sm text-slate-500 mb-4">Try removing filters or change city/category</p>
+              <h3 className="text-xl font-bold mb-2 dark:text-white">No providers match your filters</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Try removing filters or change city/category</p>
               <div className="flex justify-center gap-3">
                 <button onClick={clearFilters} className="btn-primary">Reset filters</button>
-                <Link to="/" className="btn-ghost">Back home</Link>
+                <Link to="/" className="btn-ghost dark:text-slate-200">Back home</Link>
               </div>
             </div>
           ) : (

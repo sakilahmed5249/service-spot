@@ -274,6 +274,11 @@
   box-shadow: 0 0 14px rgba(255, 255, 255, .12);
 }
 
+/* Half star clipping mask */
+.clip-half {
+  clip-path: inset(0 50% 0 0);
+}
+
 /* ----------------------
    Usage notes (why)
    - Toggle .theme-dark on root to switch to dark glass UI

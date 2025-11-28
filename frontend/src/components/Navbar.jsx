@@ -27,7 +27,11 @@ function ThemeToggle() {
 
   useEffect(() => {
     const root = document.documentElement;
-    if (isDark) root.classList.add('theme-dark'); else root.classList.remove('theme-dark');
+    if (isDark) {
+      root.classList.add('dark', 'theme-dark');
+    } else {
+      root.classList.remove('dark', 'theme-dark');
+    }
     try { localStorage.setItem('ss_theme', isDark ? 'dark' : 'light'); } catch {}
   }, [isDark]);
 
@@ -272,13 +276,13 @@ const Navbar = () => {
             </div>
             <div className="flex flex-col leading-tight">
               <span className="text-lg font-display font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">ServiceSpot</span>
-              <span className="text-xs text-slate-300 -mt-0.5 hidden sm:block">Local services, booked fast</span>
+              <span className="text-xs text-slate-700 dark:text-slate-400 -mt-0.5 hidden sm:block">Local services, booked fast</span>
             </div>
           </Link>
 
           {/* Desktop menu */}
           <div className="hidden md:flex items-center gap-6">
-            <Link to="/services" className="relative text-sm font-medium text-slate-700 hover:text-primary transition-colors">
+            <Link to="/services" className="relative text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-primary transition-colors">
               <span className="group">Browse Services</span>
               <span className="absolute left-0 -bottom-1 h-0.5 w-0 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all"></span>
             </Link>
@@ -287,17 +291,17 @@ const Navbar = () => {
               <>
                 {user.role === 'customer' && (
                   <>
-                    <Link to="/my-bookings" className="flex items-center gap-2 text-sm text-slate-700 hover:text-primary transition-colors" aria-label="My Bookings">
+                    <Link to="/my-bookings" className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 hover:text-primary transition-colors" aria-label="My Bookings">
                       <Calendar size={16} /><span>My Bookings</span>
                     </Link>
-                    <Link to="/profile" className="flex items-center gap-2 text-sm text-slate-700 hover:text-primary transition-colors" aria-label="Profile">
+                    <Link to="/profile" className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 hover:text-primary transition-colors" aria-label="Profile">
                       <User size={16} /><span>Profile</span>
                     </Link>
                   </>
                 )}
 
                 {user.role === 'provider' && (
-                  <Link to="/provider/dashboard" className="flex items-center gap-2 text-sm text-slate-700 hover:text-primary transition-colors" aria-label="Provider dashboard">
+                  <Link to="/provider/dashboard" className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 hover:text-primary transition-colors" aria-label="Provider dashboard">
                     <LayoutDashboard size={16} /><span>Dashboard</span>
                   </Link>
                 )}
@@ -311,7 +315,7 @@ const Navbar = () => {
               </>
             ) : (
               <div className="flex items-center gap-3">
-                <Link to="/login" className="text-sm font-medium text-slate-700 hover:text-primary transition">Login</Link>
+                <Link to="/login" className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-primary transition">Login</Link>
                 <Link to="/signup" className="btn-primary text-sm">Sign Up</Link>
                 <ThemeToggle />
               </div>
@@ -345,19 +349,19 @@ const Navbar = () => {
           onKeyDown={handleMobileKeyDown}
         >
           <div className="card-glass p-4 space-y-3 animate-slide-in-up">
-            <Link to="/services" className="block py-3 px-3 rounded-lg text-sm font-medium text-slate-700 hover:bg-white/5" onClick={() => setIsOpen(false)}>Browse Services</Link>
+            <Link to="/services" className="block py-3 px-3 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-white/5" onClick={() => setIsOpen(false)}>Browse Services</Link>
 
             {user ? (
               <>
                 {user.role === 'customer' && (
                   <>
-                    <Link to="/my-bookings" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-slate-700 hover:bg-white/5" onClick={() => setIsOpen(false)}><Calendar size={16} /> My Bookings</Link>
-                    <Link to="/profile" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-slate-700 hover:bg-white/5" onClick={() => setIsOpen(false)}><User size={16} /> Profile</Link>
+                    <Link to="/my-bookings" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-white/5" onClick={() => setIsOpen(false)}><Calendar size={16} /> My Bookings</Link>
+                    <Link to="/profile" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-white/5" onClick={() => setIsOpen(false)}><User size={16} /> Profile</Link>
                   </>
                 )}
 
                 {user.role === 'provider' && (
-                  <Link to="/provider/dashboard" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-slate-700 hover:bg-white/5" onClick={() => setIsOpen(false)}><LayoutDashboard size={16} /> Dashboard</Link>
+                  <Link to="/provider/dashboard" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-white/5" onClick={() => setIsOpen(false)}><LayoutDashboard size={16} /> Dashboard</Link>
                 )}
 
                 <div className="pt-2 border-t border-white/6">
@@ -377,7 +381,7 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                <Link to="/login" className="block py-3 px-3 rounded-lg text-sm font-medium text-slate-700 hover:bg-white/5" onClick={() => setIsOpen(false)}>Login</Link>
+                <Link to="/login" className="block py-3 px-3 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-white/5" onClick={() => setIsOpen(false)}>Login</Link>
                 <Link to="/signup" className="block py-3 px-3 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-primary to-accent text-center" onClick={() => setIsOpen(false)}>Sign Up</Link>
               </>
             )}
