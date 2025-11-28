@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 
 // Components & wrappers (assumed present in your codebase)
 import Navbar from './components/Navbar';
@@ -17,7 +18,25 @@ const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'));
 const BookingPage = lazy(() => import('./pages/BookingPage'));
 const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'));
 const CustomerProfile = lazy(() => import('./pages/CustomerProfile'));
+const ProviderProfile = lazy(() => import('./pages/ProviderProfile'));
 const ProviderDashboard = lazy(() => import('./pages/ProviderDashboard'));
+
+// Smart Profile Component that shows correct profile based on user role
+const ProfilePage = () => {
+  const { user } = useAuth();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Show provider profile for PROVIDER role (case-insensitive)
+  const role = user.role?.toUpperCase();
+  if (role === 'PROVIDER' || role === 'SERVICE_PROVIDER') {
+    return <ProviderProfile />;
+  }
+
+  return <CustomerProfile />;
+};
 
 export default function App() {
   return (
@@ -53,11 +72,12 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              {/* Profile Route - Smart component that shows correct profile based on role */}
               <Route
                 path="/profile"
                 element={
-                  <ProtectedRoute role="customer">
-                    <CustomerProfile />
+                  <ProtectedRoute>
+                    <ProfilePage />
                   </ProtectedRoute>
                 }
               />

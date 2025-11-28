@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { bookingAPI /*, serviceAPI, availabilityAPI */ } from '../services/api';
+import { useNavigate } from 'react-router-dom';
+import { bookingAPI, serviceAPI } from '../services/api';
 import {
   Calendar,
   Clock,
@@ -130,11 +131,23 @@ function BookingItem({ booking, updatingId, onUpdate }) {
 
 const ProviderDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('bookings'); // bookings | services | profile
   const [bookings, setBookings] = useState([]);
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null); // booking id under update
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
+  const [serviceForm, setServiceForm] = useState({
+    title: '',
+    description: '',
+    price: '',
+    category: '',
+    durationMinutes: '60',
+  });
+  const [serviceFormErrors, setServiceFormErrors] = useState({});
+  const [savingService, setSavingService] = useState(false);
   const [stats, setStats] = useState({
     totalBookings: 0,
     pendingBookings: 0,
@@ -147,71 +160,193 @@ const ProviderDashboard = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* Handler for Add Service button */
+  const handleAddService = () => {
+    setSelectedService(null);
+    setServiceForm({
+      title: '',
+      description: '',
+      price: '',
+      category: '',
+      durationMinutes: '60',
+    });
+    setServiceFormErrors({});
+    setShowServiceModal(true);
+  };
+
+  /* Handler for Edit Profile button */
+  const handleEditProfile = () => {
+    // Navigate to the profile page where editing is already implemented
+    navigate('/profile');
+  };
+
+  /* Handler for Edit Service button */
+  const handleEditService = (serviceId) => {
+    const service = services.find(s => s.id === serviceId);
+    setSelectedService(service);
+    setServiceForm({
+      title: service.title || '',
+      description: service.description || '',
+      price: service.price || service.basePrice || '',
+      category: service.category?.name || service.categoryName || '',
+      durationMinutes: service.durationMinutes || '60',
+    });
+    setServiceFormErrors({});
+    setShowServiceModal(true);
+  };
+
+  /* Handle service form input changes */
+  const handleServiceFormChange = (e) => {
+    const { name, value } = e.target;
+    setServiceForm(prev => ({ ...prev, [name]: value }));
+    if (serviceFormErrors[name]) {
+      setServiceFormErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  /* Validate service form */
+  const validateServiceForm = () => {
+    const errors = {};
+    if (!serviceForm.title.trim()) {
+      errors.title = 'Title is required';
+    }
+
+    if (!serviceForm.description.trim()) {
+      errors.description = 'Description is required';
+    }
+
+    if (!serviceForm.price || parseFloat(serviceForm.price) <= 0) {
+      errors.price = 'Price must be greater than 0';
+    }
+
+    if (!serviceForm.category.trim()) {
+      errors.category = 'Category is required';
+    }
+
+    if (!serviceForm.durationMinutes || parseInt(serviceForm.durationMinutes) <= 0) {
+      errors.durationMinutes = 'Duration must be greater than 0';
+    }
+
+    setServiceFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  /* Submit service form */
+  const handleServiceSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateServiceForm()) return;
+
+    setSavingService(true);
+    try {
+      // Backend accepts flexible category - can be any text
+      const serviceData = {
+        categoryName: serviceForm.category.trim(), // Use category name instead of ID
+        title: serviceForm.title.trim(),
+        description: serviceForm.description.trim(),
+        price: parseFloat(serviceForm.price),
+        priceUnit: 'per hour',
+        durationMinutes: parseInt(serviceForm.durationMinutes),
+        serviceLocation: user.city || 'On-site',
+        serviceRadiusKm: 10, // Default 10km service radius
+        city: user.city || 'Not specified',
+        state: user.state || 'Not specified',
+        pincode: user.pincode || 400001,
+        imageUrl: null,
+        additionalImages: null,
+      };
+
+      console.log('Submitting service data:', serviceData);
+
+      if (selectedService) {
+        // Update existing service
+        await serviceAPI.update(selectedService.id, serviceData);
+        alert('Service updated successfully!');
+      } else {
+        // Create new service - pass providerId as second parameter
+        await serviceAPI.create(serviceData, user.id);
+        alert('Service created successfully!');
+      }
+
+      setShowServiceModal(false);
+      fetchDashboardData(); // Refresh the services list
+    } catch (error) {
+      console.error('Error saving service:', error);
+      const errorMsg = error?.response?.data?.message || error.message || 'Failed to save service';
+
+      // Show detailed validation errors if available
+      if (error?.response?.data?.errors) {
+        console.error('Validation errors:', error.response.data.errors);
+        alert('Validation errors:\n' + JSON.stringify(error.response.data.errors, null, 2));
+      } else {
+        alert(errorMsg);
+      }
+    } finally {
+      setSavingService(false);
+    }
+  };
+
+  /* Handler for Delete Service button */
+  const handleDeleteService = async (serviceId) => {
+    if (!window.confirm('Are you sure you want to delete this service?')) {
+      return;
+    }
+
+    try {
+      // TODO: Implement service deletion API call
+      alert(`Delete Service #${serviceId}: This will call the API to delete the service. To be implemented.`);
+      // await serviceAPI.delete(serviceId);
+      // Refresh services list
+      // fetchDashboardData();
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      alert('Failed to delete service. Please try again.');
+    }
+  };
+
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // TODO: swap in real API; kept mocks for now
-      // const bookingsResponse = await bookingAPI.getByUser(user.id, 'provider');
-      // setBookings(bookingsResponse.data);
+      // Fetch real bookings from API
+      let fetchedBookings = [];
+      try {
+        if (bookingAPI?.getByUser) {
+          const bookingsResponse = await bookingAPI.getByUser(user.id, 'provider');
+          fetchedBookings = bookingsResponse.data?.data || bookingsResponse.data || [];
+        }
+      } catch (error) {
+        console.log('No bookings found or API not available:', error.message);
+        fetchedBookings = [];
+      }
 
-      const mockBookings = [
-        {
-          id: 1,
-          serviceTitle: 'Plumbing Repair',
-          customerName: 'John Doe',
-          customerId: 1,
-          slotStart: '2025-11-28T10:00:00',
-          status: 'PENDING',
-          basePrice: 500,
-          notes: 'Kitchen sink leaking',
-          createdAt: '2025-11-25T14:30:00',
-        },
-        {
-          id: 2,
-          serviceTitle: 'Plumbing Installation',
-          customerName: 'Jane Smith',
-          customerId: 2,
-          slotStart: '2025-11-30T14:00:00',
-          status: 'CONFIRMED',
-          basePrice: 800,
-          notes: 'Install new faucets',
-          createdAt: '2025-11-26T09:15:00',
-        },
-        {
-          id: 3,
-          serviceTitle: 'Emergency Repair',
-          customerName: 'Bob Wilson',
-          customerId: 3,
-          slotStart: '2025-11-20T09:00:00',
-          status: 'COMPLETED',
-          basePrice: 1200,
-          notes: 'Urgent pipe burst',
-          createdAt: '2025-11-18T11:20:00',
-        },
-      ];
+      setBookings(fetchedBookings);
 
-      setBookings(mockBookings);
+      // Fetch real services from API
+      let fetchedServices = [];
+      try {
+        const servicesResponse = await serviceAPI.getByProvider(user.id);
+        fetchedServices = servicesResponse.data?.data || servicesResponse.data || [];
+      } catch (error) {
+        console.log('No services found or API not available:', error.message);
+        fetchedServices = [];
+      }
 
-      setServices([
-        {
-          id: 1,
-          title: 'General Plumbing',
-          category: 'Plumbing',
-          basePrice: 500,
-          durationMinutes: 60,
-          description: 'Basic plumbing services',
-        },
-      ]);
+      setServices(fetchedServices);
 
-      // compute stats
-      const totalBookings = mockBookings.length;
-      const pendingBookings = mockBookings.filter(b => b.status === 'PENDING').length;
-      const completedBookings = mockBookings.filter(b => b.status === 'COMPLETED').length;
-      const totalRevenue = mockBookings.filter(b => b.status === 'COMPLETED').reduce((s, b) => s + b.basePrice, 0);
+      // compute stats from real data
+      const totalBookings = fetchedBookings.length;
+      const pendingBookings = fetchedBookings.filter(b => b.status === 'PENDING').length;
+      const completedBookings = fetchedBookings.filter(b => b.status === 'COMPLETED').length;
+      const totalRevenue = fetchedBookings
+        .filter(b => b.status === 'COMPLETED')
+        .reduce((s, b) => s + (b.basePrice || b.price || 0), 0);
 
       setStats({ totalBookings, pendingBookings, completedBookings, totalRevenue });
     } catch (err) {
       console.error('fetchDashboardData error', err);
+      // Set empty data on error
+      setBookings([]);
+      setServices([]);
+      setStats({ totalBookings: 0, pendingBookings: 0, completedBookings: 0, totalRevenue: 0 });
     } finally {
       setLoading(false);
     }
@@ -362,7 +497,10 @@ const ProviderDashboard = () => {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">My Services</h2>
-            <button className="btn-primary inline-flex items-center gap-2">
+            <button
+              onClick={handleAddService}
+              className="btn-primary inline-flex items-center gap-2"
+            >
               <Plus size={16} /> Add Service
             </button>
           </div>
@@ -375,16 +513,26 @@ const ProviderDashboard = () => {
                     <h3 className="font-semibold text-lg">{s.title}</h3>
                     <p className="text-sm text-slate-400 mt-1">{s.description}</p>
                     <div className="mt-3 flex gap-3 text-sm">
-                      <div className="text-slate-500">Category: <span className="font-medium text-white ml-1">{s.category}</span></div>
+                      <div className="text-slate-500">Category: <span className="font-medium text-white ml-1">{s.category?.name || s.categoryName || 'Uncategorized'}</span></div>
                       <div className="text-slate-500">Duration: <span className="font-medium text-white ml-1">{s.durationMinutes}m</span></div>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-2 items-end">
-                    <div className="text-lg font-bold text-primary">{formatCurrency(s.basePrice)}</div>
+                    <div className="text-lg font-bold text-primary">{formatCurrency(s.price || s.basePrice || 0)}</div>
                     <div className="flex gap-2">
-                      <button className="btn-secondary px-3 py-2">Edit</button>
-                      <button className="btn-danger px-3 py-2">Delete</button>
+                      <button
+                        onClick={() => handleEditService(s.id)}
+                        className="btn-secondary px-3 py-2"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteService(s.id)}
+                        className="btn-danger px-3 py-2"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -428,14 +576,150 @@ const ProviderDashboard = () => {
           </div>
 
           <div className="mt-6">
-            <button className="btn-primary">Edit Profile</button>
+            <button
+              onClick={handleEditProfile}
+              className="btn-primary"
+            >
+              Edit Profile
+            </button>
           </div>
         </section>
       )}
 
-      {/* placeholder for future modals (availability, messages) */}
-      <Modal isOpen={false} onClose={() => {}} title="Placeholder" size="md">
-        <div />
+      {/* Service Creation/Edit Modal */}
+      <Modal
+        isOpen={showServiceModal}
+        onClose={() => setShowServiceModal(false)}
+        title={selectedService ? 'Edit Service' : 'Add New Service'}
+        size="lg"
+      >
+        <form onSubmit={handleServiceSubmit} className="space-y-4">
+          {/* Service Title */}
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium text-slate-300 mb-2">
+              Service Title *
+            </label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              value={serviceForm.title}
+              onChange={handleServiceFormChange}
+              className={`input-field ${serviceFormErrors.title ? 'border-red-500' : ''}`}
+              placeholder="e.g., Kitchen Sink Repair"
+            />
+            {serviceFormErrors.title && (
+              <p className="text-red-400 text-sm mt-1">{serviceFormErrors.title}</p>
+            )}
+          </div>
+
+          {/* Description */}
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium text-slate-300 mb-2">
+              Description *
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              value={serviceForm.description}
+              onChange={handleServiceFormChange}
+              rows="4"
+              className={`input-field ${serviceFormErrors.description ? 'border-red-500' : ''}`}
+              placeholder="Describe your service..."
+            />
+            {serviceFormErrors.description && (
+              <p className="text-red-400 text-sm mt-1">{serviceFormErrors.description}</p>
+            )}
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            {/* Category */}
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-slate-300 mb-2">
+                Category *
+              </label>
+              <input
+                type="text"
+                id="category"
+                name="category"
+                value={serviceForm.category}
+                onChange={handleServiceFormChange}
+                className={`input-field ${serviceFormErrors.category ? 'border-red-500' : ''}`}
+                placeholder="e.g., Plumbing"
+              />
+              {serviceFormErrors.category && (
+                <p className="text-red-400 text-sm mt-1">{serviceFormErrors.category}</p>
+              )}
+            </div>
+
+            {/* Price */}
+            <div>
+              <label htmlFor="price" className="block text-sm font-medium text-slate-300 mb-2">
+                Price (₹) *
+              </label>
+              <input
+                type="number"
+                id="price"
+                name="price"
+                value={serviceForm.price}
+                onChange={handleServiceFormChange}
+                className={`input-field ${serviceFormErrors.price ? 'border-red-500' : ''}`}
+                placeholder="500"
+                min="0"
+                step="0.01"
+              />
+              {serviceFormErrors.price && (
+                <p className="text-red-400 text-sm mt-1">{serviceFormErrors.price}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Duration */}
+          <div>
+            <label htmlFor="durationMinutes" className="block text-sm font-medium text-slate-300 mb-2">
+              Duration (minutes) *
+            </label>
+            <input
+              type="number"
+              id="durationMinutes"
+              name="durationMinutes"
+              value={serviceForm.durationMinutes}
+              onChange={handleServiceFormChange}
+              className={`input-field ${serviceFormErrors.durationMinutes ? 'border-red-500' : ''}`}
+              placeholder="60"
+              min="1"
+            />
+            {serviceFormErrors.durationMinutes && (
+              <p className="text-red-400 text-sm mt-1">{serviceFormErrors.durationMinutes}</p>
+            )}
+          </div>
+
+          {/* Form Actions */}
+          <div className="flex gap-3 pt-4 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => setShowServiceModal(false)}
+              className="btn-secondary flex-1"
+              disabled={savingService}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="btn-primary flex-1 flex items-center justify-center gap-2"
+              disabled={savingService}
+            >
+              {savingService ? (
+                <>
+                  <InlineSpinner />
+                  {selectedService ? 'Updating...' : 'Creating...'}
+                </>
+              ) : (
+                selectedService ? 'Update Service' : 'Create Service'
+              )}
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

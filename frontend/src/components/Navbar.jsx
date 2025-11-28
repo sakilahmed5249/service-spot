@@ -153,7 +153,7 @@ function AvatarWithMenu({ user, onLogout }) {
               <User size={16} /> Profile
             </Link>
 
-            {user?.role === 'provider' && (
+            {(user?.role === 'provider' || user?.role === 'PROVIDER' || user?.role === 'SERVICE_PROVIDER') && (
               <Link
                 to="/provider/dashboard"
                 role="menuitem"
@@ -164,7 +164,7 @@ function AvatarWithMenu({ user, onLogout }) {
               </Link>
             )}
 
-            {user?.role === 'customer' && (
+            {(user?.role === 'customer' || user?.role === 'CUSTOMER') && (
               <Link
                 to="/my-bookings"
                 role="menuitem"

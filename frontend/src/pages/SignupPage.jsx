@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, User, Briefcase, Lock, MapPin, Phone } from 'lucide-react';
+import { UserPlus, User, Briefcase, Lock, MapPin, Phone, DollarSign, Award } from 'lucide-react';
 import { FaGoogle, FaFacebookF, FaApple } from 'react-icons/fa';
 import {
   CITIES,
   STATES,
+  SERVICE_CATEGORIES,
   isValidEmail,
   isValidPhone,
   isValidPincode,
@@ -108,6 +109,11 @@ const SignupPage = () => {
     city: '',
     state: '',
     pincode: '',
+    // Service Provider specific fields
+    serviceType: '',
+    approxPrice: '',
+    description: '',
+    yearsExperience: '',
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
@@ -133,6 +139,21 @@ const SignupPage = () => {
     if (!formData.city) newErrors.city = 'City is required';
     if (!formData.state) newErrors.state = 'State is required';
     if (!isValidPincode(formData.pincode)) newErrors.pincode = 'Invalid pincode (6 digits)';
+
+    // Provider-specific validation
+    if (userType === 'provider') {
+      if (!formData.serviceType) newErrors.serviceType = 'Service type is required';
+      if (!formData.approxPrice || parseFloat(formData.approxPrice) <= 0) {
+        newErrors.approxPrice = 'Price must be greater than 0';
+      }
+      if (formData.yearsExperience && (parseInt(formData.yearsExperience) < 0 || parseInt(formData.yearsExperience) > 50)) {
+        newErrors.yearsExperience = 'Years of experience must be between 0 and 50';
+      }
+      if (formData.description && formData.description.length > 1000) {
+        newErrors.description = 'Description must not exceed 1000 characters';
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -142,12 +163,43 @@ const SignupPage = () => {
     if (!validateForm()) return;
     setLoading(true);
     const { confirmPassword, ...signupData } = formData;
-    const result = await signup(signupData, userType);
+
+    // Prepare data based on user type
+    const finalData = { ...signupData };
+
+    // Convert pincode to integer
+    finalData.pincode = parseInt(finalData.pincode);
+
+    // For providers, include service fields and convert types
+    if (userType === 'provider') {
+      finalData.approxPrice = parseFloat(finalData.approxPrice);
+      finalData.yearsExperience = finalData.yearsExperience ? parseInt(finalData.yearsExperience) : 0;
+      // Keep serviceType and description as strings
+    } else {
+      // Remove provider-specific fields for customer registration
+      delete finalData.serviceType;
+      delete finalData.approxPrice;
+      delete finalData.description;
+      delete finalData.yearsExperience;
+    }
+
+    // Rename 'pwd' to 'password' for backend
+    finalData.password = finalData.pwd;
+    delete finalData.pwd;
+
+    console.log('Submitting registration data:', finalData);
+    console.log('User type:', userType);
+
+    const result = await signup(finalData, userType);
+
+    console.log('Registration result:', result);
+
     if (result.success) {
       alert('Account created successfully! Please login.');
       navigate(`/login?type=${userType}`);
     } else {
-      setErrors({ general: result.error });
+      console.error('Registration failed:', result.error);
+      setErrors({ general: result.error || 'Registration failed. Please try again.' });
     }
     setLoading(false);
   };
@@ -335,23 +387,128 @@ const SignupPage = () => {
                 <div className="mt-4 grid md:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="city" className="block text-sm text-slate-300 mb-1">City *</label>
-                    <select id="city" name="city" value={formData.city} onChange={handleChange} className={`input-field ${errors.city ? 'border-red-500' : ''}`}>
-                      <option value="">Select City</option>
-                      {CITIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
+                    <input
+                      type="text"
+                      id="city"
+                      name="city"
+                      value={formData.city}
+                      onChange={handleChange}
+                      className={`input-field ${errors.city ? 'border-red-500' : ''}`}
+                      placeholder="Enter your city"
+                      list="cities-suggestions"
+                    />
+                    <datalist id="cities-suggestions">
+                      {CITIES.map(c => <option key={c} value={c} />)}
+                    </datalist>
                     {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
                   </div>
 
                   <div>
                     <label htmlFor="state" className="block text-sm text-slate-300 mb-1">State *</label>
-                    <select id="state" name="state" value={formData.state} onChange={handleChange} className={`input-field ${errors.state ? 'border-red-500' : ''}`}>
-                      <option value="">Select State</option>
-                      {STATES.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <input
+                      type="text"
+                      id="state"
+                      name="state"
+                      value={formData.state}
+                      onChange={handleChange}
+                      className={`input-field ${errors.state ? 'border-red-500' : ''}`}
+                      placeholder="Enter your state"
+                      list="states-suggestions"
+                    />
+                    <datalist id="states-suggestions">
+                      {STATES.map(s => <option key={s} value={s} />)}
+                    </datalist>
                     {errors.state && <p className="text-red-500 text-sm mt-1">{errors.state}</p>}
                   </div>
                 </div>
               </div>
+
+              {/* Service Information - Only for Providers */}
+              {userType === 'provider' && (
+                <div className="border-t border-white/6 pt-6 mt-6">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <Briefcase size={18} className="text-slate-300" /> Service Information
+                  </h3>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="serviceType" className="block text-sm text-slate-300 mb-1">Service Category *</label>
+                      <input
+                        type="text"
+                        id="serviceType"
+                        name="serviceType"
+                        value={formData.serviceType}
+                        onChange={handleChange}
+                        className={`input-field ${errors.serviceType ? 'border-red-500' : ''}`}
+                        placeholder="e.g., Plumbing, Electrical, Cleaning"
+                        list="service-suggestions"
+                      />
+                      <datalist id="service-suggestions">
+                        {SERVICE_CATEGORIES.map(cat => <option key={cat} value={cat} />)}
+                      </datalist>
+                      {errors.serviceType && <p className="text-red-500 text-sm mt-1">{errors.serviceType}</p>}
+                    </div>
+
+                    <div>
+                      <label htmlFor="approxPrice" className="block text-sm text-slate-300 mb-1">Approximate Price (₹) *</label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          id="approxPrice"
+                          name="approxPrice"
+                          value={formData.approxPrice}
+                          onChange={handleChange}
+                          className={`input-field pl-12 ${errors.approxPrice ? 'border-red-500' : ''}`}
+                          placeholder="500.00"
+                          min="0"
+                          step="0.01"
+                        />
+                        <div className="absolute left-3 top-3 text-slate-400"><DollarSign size={16} /></div>
+                      </div>
+                      {errors.approxPrice && <p className="text-red-500 text-sm mt-1">{errors.approxPrice}</p>}
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label htmlFor="yearsExperience" className="block text-sm text-slate-300 mb-1">Years of Experience (Optional)</label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        id="yearsExperience"
+                        name="yearsExperience"
+                        value={formData.yearsExperience}
+                        onChange={handleChange}
+                        className={`input-field pl-12 ${errors.yearsExperience ? 'border-red-500' : ''}`}
+                        placeholder="5"
+                        min="0"
+                        max="50"
+                      />
+                      <div className="absolute left-3 top-3 text-slate-400"><Award size={16} /></div>
+                    </div>
+                    {errors.yearsExperience && <p className="text-red-500 text-sm mt-1">{errors.yearsExperience}</p>}
+                  </div>
+
+                  <div className="mt-4">
+                    <label htmlFor="description" className="block text-sm text-slate-300 mb-1">Service Description (Optional)</label>
+                    <textarea
+                      id="description"
+                      name="description"
+                      value={formData.description}
+                      onChange={handleChange}
+                      className={`input-field ${errors.description ? 'border-red-500' : ''}`}
+                      placeholder="Describe your services, expertise, and what makes you stand out..."
+                      rows="4"
+                      maxLength="1000"
+                    />
+                    <div className="flex justify-between items-center mt-1">
+                      {errors.description && <p className="text-red-500 text-sm">{errors.description}</p>}
+                      <p className="text-xs text-slate-400 ml-auto">
+                        {formData.description.length}/1000 characters
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <button type="submit" disabled={loading} className="w-full btn-primary mt-6">
                 {loading ? 'Creating Account...' : 'Create Account'}

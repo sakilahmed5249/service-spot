@@ -1,15 +1,56 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, MapPin, ArrowRight, TrendingUp } from 'lucide-react';
 import { SERVICE_CATEGORIES, CITIES } from '../utils/constants';
 import { getCategoryIcon } from '../utils/categoryIcons';
 import ImageSlider from '../components/ImageSlider';
+import axios from 'axios';
+
+const API_BASE_URL = 'http://localhost:8080/api';
 
 /* Why: Single-file landing page improved with glassy hero, CTA, and accessible search */
 export default function LandingPage() {
   const navigate = useNavigate();
   const [searchCity, setSearchCity] = useState('');
   const [searchCategory, setSearchCategory] = useState('');
+
+  // Dynamic data from database
+  const [availableCities, setAvailableCities] = useState([]);
+  const [availableServices, setAvailableServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch available cities and services on component mount
+  useEffect(() => {
+    const fetchAvailableData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch available cities from providers
+        const citiesResponse = await axios.get(`${API_BASE_URL}/users/providers/locations/cities`);
+        const cities = citiesResponse.data.data || [];
+
+        // Fetch available service types from providers
+        const servicesResponse = await axios.get(`${API_BASE_URL}/users/providers/service-types`);
+        const services = servicesResponse.data.data || [];
+
+        // Show ONLY database data - truly dynamic
+        setAvailableCities(cities);
+        setAvailableServices(services);
+
+        console.log('Fetched cities:', cities);
+        console.log('Fetched services:', services);
+      } catch (error) {
+        console.error('Error fetching available data:', error);
+        // Show empty arrays on error - no data available
+        setAvailableCities([]);
+        setAvailableServices([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAvailableData();
+  }, []);
 
   const heroImages = [
     {
@@ -46,7 +87,11 @@ export default function LandingPage() {
     navigate(`/services?${params.toString()}`);
   };
 
-  const featuredCategories = SERVICE_CATEGORIES.slice(0, 8);
+  // Show available services from database (up to 8)
+  // If no data, show fallback categories for better UX
+  const featuredCategories = availableServices.length > 0
+    ? availableServices.slice(0, 8)
+    : SERVICE_CATEGORIES.slice(0, 8);
 
   return (
     <div className="bg-white">
@@ -56,7 +101,7 @@ export default function LandingPage() {
         <div className="absolute inset-0 z-0">
           <ImageSlider images={heroImages} />
         </div>
-        
+
         {/* Light Overlay for text readability */}
         <div className="absolute inset-0 bg-white/80 z-[1]"></div>
 
@@ -70,7 +115,7 @@ export default function LandingPage() {
               Find Home <span className="text-primary">Service/Repair</span>
               <br />Near You
             </h1>
-            
+
             <p className="text-lg md:text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
               Explore Best Home Service & Repair near you
             </p>
@@ -83,28 +128,34 @@ export default function LandingPage() {
                   value={searchCity}
                   onChange={(e) => setSearchCity(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white transition-all duration-300 appearance-none cursor-pointer font-medium"
+                  disabled={loading}
                 >
-                  <option value="">📍 Select City</option>
-                  {CITIES.map((city) => (
+                  <option value="">
+                    {loading ? '⏳ Loading cities...' : availableCities.length > 0 ? '📍 Select City' : '📍 No cities available - Register as provider first'}
+                  </option>
+                  {availableCities.map((city) => (
                     <option key={city} value={city}>{city}</option>
                   ))}
                 </select>
               </div>
-              
+
               <div className="flex-1 relative group">
                 <TrendingUp className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-600 transition-colors" size={20} />
                 <select
                   value={searchCategory}
                   onChange={(e) => setSearchCategory(e.target.value)}
                   className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white transition-all duration-300 appearance-none cursor-pointer font-medium"
+                  disabled={loading}
                 >
-                  <option value="">🔍 Select Service</option>
-                  {SERVICE_CATEGORIES.map((category) => (
+                  <option value="">
+                    {loading ? '⏳ Loading services...' : availableServices.length > 0 ? '🔍 Select Service' : '🔍 No services available - Register as provider first'}
+                  </option>
+                  {availableServices.map((category) => (
                     <option key={category} value={category}>{category}</option>
                   ))}
                 </select>
               </div>
-              
+
               <button type="submit" className="btn-primary flex items-center justify-center gap-2 min-w-[140px]">
                 <Search size={20} />
                 <span className="font-bold">Search</span>
@@ -156,15 +207,15 @@ export default function LandingPage() {
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link 
-                to="/signup?type=provider" 
+              <Link
+                to="/signup?type=provider"
                 className="bg-primary text-white px-8 py-3 rounded-full font-semibold hover:bg-primary-600 transition-colors inline-flex items-center justify-center gap-2"
               >
                 Register as Provider
                 <ArrowRight size={20} />
               </Link>
-              <Link 
-                to="/services" 
+              <Link
+                to="/services"
                 className="bg-white text-primary border-2 border-primary px-8 py-3 rounded-full font-semibold hover:bg-primary-50 transition-colors inline-flex items-center justify-center gap-2"
               >
                 Browse Services

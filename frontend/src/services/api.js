@@ -50,27 +50,24 @@ api.interceptors.response.use(
    Customer APIs
    --------------------------- */
 export const customerAPI = {
-  signup: (data) => api.post('/customer/signup', data),
-  login: (data) => api.post('/customer/login', data),
-  update: (id, data) => api.put(`/customer/update/${id}`, data),
-  delete: (id) => api.delete(`/customer/delete/${id}`),
-  getById: (id) => api.get(`/customer/${id}`),
+  signup: (data) => api.post('/auth/register/customer', data),
+  login: (data) => api.post('/auth/login', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`),
+  getById: (id) => api.get(`/users/${id}`),
 };
 
 /* ---------------------------
    Provider APIs
-   NOTE: providerAPI.login now sends { email } as JSON body.
-   Change this if your backend expects query params or a different payload.
    --------------------------- */
 export const providerAPI = {
-  signup: (data) => api.post('/provider/signup', data),
-  // send email as JSON body (recommended). If backend expects query param, change accordingly.
-  login: (email) => api.post('/provider/login', { email }),
-  update: (data) => api.put('/provider/update', data),
-  delete: (id) => api.delete(`/provider/delete/${id}`),
-  getAll: () => api.get('/provider/all'),
-  getById: (id) => api.get(`/provider/${id}`),
-  searchByCity: (city) => api.get('/provider/search', { params: { city } }),
+  signup: (data) => api.post('/auth/register/provider', data),
+  login: (data) => api.post('/auth/login', data),
+  update: (id, data) => api.put(`/users/${id}`, data),
+  delete: (id) => api.delete(`/users/${id}`),
+  getAll: () => api.get('/users/providers/search', { params: { keyword: '' } }),
+  getById: (id) => api.get(`/users/${id}`),
+  searchByCity: (city) => api.get(`/users/providers/city/${city}`),
 };
 
 /* ---------------------------
@@ -80,7 +77,7 @@ export const serviceAPI = {
   search: (params) => api.get('/services', { params }),
   getById: (id) => api.get(`/services/${id}`),
   getByProvider: (providerId) => api.get(`/services/provider/${providerId}`),
-  create: (data) => api.post('/services', data),
+  create: (data, providerId) => api.post('/services', data, { params: { providerId } }),
   update: (id, data) => api.put(`/services/${id}`, data),
   delete: (id) => api.delete(`/services/${id}`),
 };

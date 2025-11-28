@@ -180,6 +180,8 @@ export const AuthProvider = ({ children }) => {
     setLoading(true);
     setError(null);
     try {
+      console.log('Login attempt:', { email: credentials.email, userType });
+
       let response = null;
 
       if (userType === 'customer') {
@@ -191,17 +193,37 @@ export const AuthProvider = ({ children }) => {
         response = await providerAPI.login(credentials);
       }
 
-      const data = response?.data ?? response;
-      // prefer token + user from API but support older shapes
-      const token = data?.token ?? data?.accessToken ?? btoa(JSON.stringify({ id: data?.id ?? Date.now() }));
-      const userFromApi = data?.user ?? (data?.profile ?? data) ?? null;
+      console.log('Login API response:', response);
 
-      const finalUser = userFromApi ? { ...userFromApi, role: userType } : { ...credentials, role: userType };
+      // Backend returns ApiResponse<AuthResponse>
+      // axios extracts to response.data = { success, message, data: AuthResponse }
+      const apiResponse = response?.data ?? response;
+      console.log('API Response object:', apiResponse);
+
+      // Extract AuthResponse from ApiResponse.data
+      const authData = apiResponse?.data ?? apiResponse;
+      console.log('Auth data:', authData);
+
+      // Extract token and user from AuthResponse
+      const token = authData?.token;
+      const userFromApi = authData?.user;
+
+      console.log('Extracted token:', token);
+      console.log('Extracted user:', userFromApi);
+
+      if (!token || !userFromApi) {
+        throw new Error('Invalid response from server: missing token or user data');
+      }
+
+      // Use the user data from API (already includes role from backend)
+      const finalUser = { ...userFromApi };
 
       localStorage.setItem(STORAGE_KEYS.TOKEN, token);
       localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(finalUser));
       setAuthTokenOnApis(token);
       setUser(finalUser);
+
+      console.log('Login successful, user stored:', finalUser);
 
       // broadcast to other tabs
       try {
@@ -210,7 +232,13 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, user: finalUser, token };
     } catch (err) {
-      console.error('Login error', err);
+      console.error('Login error details:', {
+        message: err.message,
+        response: err.response,
+        status: err.response?.status,
+        data: err.response?.data
+      });
+
       const message = err?.response?.data?.message || err.message || 'Login failed';
       setError(message);
       return { success: false, error: message };
@@ -226,13 +254,19 @@ export const AuthProvider = ({ children }) => {
     try {
       let response = null;
 
+      console.log('Signup attempt:', { userType, userData });
+
       if (userType === 'customer') {
         if (!customerAPI?.signup) throw new Error('customerAPI.signup not implemented');
+        console.log('Calling customerAPI.signup...');
         response = await customerAPI.signup(userData);
       } else {
         if (!providerAPI?.signup) throw new Error('providerAPI.signup not implemented');
+        console.log('Calling providerAPI.signup...');
         response = await providerAPI.signup(userData);
       }
+
+      console.log('Signup API response:', response);
 
       const data = response?.data ?? response;
 
@@ -245,7 +279,14 @@ export const AuthProvider = ({ children }) => {
 
       return { success: true, data };
     } catch (err) {
-      console.error('Signup error', err);
+      console.error('Signup error details:', {
+        message: err.message,
+        response: err.response,
+        status: err.response?.status,
+        data: err.response?.data,
+        config: err.config
+      });
+
       const message = err?.response?.data?.message || err.message || 'Signup failed';
       setError(message);
       return { success: false, error: message };

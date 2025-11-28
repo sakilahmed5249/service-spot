@@ -3,9 +3,10 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Search, MapPin, Star, Filter } from 'lucide-react';
 import { FaPhone, FaEnvelope, FaMapMarkerAlt } from 'react-icons/fa';
 import { MdVerified } from 'react-icons/md';
-import { providerAPI } from '../services/api';
+import { serviceAPI } from '../services/api';
 import { SERVICE_CATEGORIES, CITIES, formatCurrency } from '../utils/constants';
 import { getCategoryIcon } from '../utils/categoryIcons';
+import { useAuth } from '../context/AuthContext';
 
 /*
   Enhanced ServiceListPage
@@ -15,8 +16,9 @@ import { getCategoryIcon } from '../utils/categoryIcons';
 */
 
 export default function ServiceListPage() {
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [providers, setProviders] = useState([]);
+  const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({
     city: searchParams.get('city') || '',
@@ -32,40 +34,45 @@ export default function ServiceListPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filters.city, filters.category, filters.search]);
 
-  // Fetch providers whenever search params change
+  // Fetch services whenever search params change
   useEffect(() => {
     let cancelled = false;
-    async function fetchProviders() {
+    async function fetchServices() {
       setLoading(true);
       try {
-        const res = await (providerAPI?.getAll?.() ?? Promise.resolve({ data: [] }));
-        const all = res.data ?? res;
+        // Fetch all services
+        const res = await serviceAPI.search({});
+        const allServices = res.data?.data || res.data || [];
+
+        console.log('Fetched services:', allServices);
+
         // Basic filtering client-side for now
-        const filtered = all.filter(p => {
-          if (filters.city && (!p.city || p.city.toLowerCase() !== filters.city.toLowerCase())) return false;
+        const filtered = allServices.filter(s => {
+          if (filters.city && (!s.city || s.city.toLowerCase() !== filters.city.toLowerCase())) return false;
           if (filters.category) {
-            const catMatch = (p.category || p.services?.[0]?.category || '').toLowerCase();
+            const catMatch = (s.category?.name || s.categoryName || '').toLowerCase();
             if (!catMatch.includes(filters.category.toLowerCase())) return false;
           }
           if (filters.search) {
-            const s = filters.search.toLowerCase();
+            const searchTerm = filters.search.toLowerCase();
             if (!(
-              (p.name || '').toLowerCase().includes(s) ||
-              (p.addressLine || '').toLowerCase().includes(s) ||
-              (p.city || '').toLowerCase().includes(s)
+              (s.title || '').toLowerCase().includes(searchTerm) ||
+              (s.description || '').toLowerCase().includes(searchTerm) ||
+              (s.provider?.name || '').toLowerCase().includes(searchTerm) ||
+              (s.city || '').toLowerCase().includes(searchTerm)
             )) return false;
           }
           return true;
         });
-        if (!cancelled) setProviders(filtered);
+        if (!cancelled) setServices(filtered);
       } catch (err) {
-        console.error('Error fetching providers:', err);
-        if (!cancelled) setProviders([]);
+        console.error('Error fetching services:', err);
+        if (!cancelled) setServices([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    fetchProviders();
+    fetchServices();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
@@ -81,9 +88,9 @@ export default function ServiceListPage() {
 
   const resultsLabel = useMemo(() => {
     if (loading) return 'Searching…';
-    if (providers.length === 0) return 'No providers found';
-    return `${providers.length} provider${providers.length !== 1 ? 's' : ''} found`;
-  }, [loading, providers.length]);
+    if (services.length === 0) return 'No services found';
+    return `${services.length} service${services.length !== 1 ? 's' : ''} found`;
+  }, [loading, services.length]);
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -197,8 +204,8 @@ export default function ServiceListPage() {
                   </span>
                 ) : (
                   <span>
-                    <span className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mr-2">{providers.length}</span>
-                    providers
+                    <span className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mr-2">{services.length}</span>
+                    services
                   </span>
                 )}
               </div>
@@ -217,10 +224,10 @@ export default function ServiceListPage() {
                 <div key={i} className="card-glass p-4 rounded-2xl animate-pulse h-44" />
               ))}
             </div>
-          ) : providers.length === 0 ? (
+          ) : services.length === 0 ? (
             <div className="rounded-2xl bg-slate-100 p-8 text-center dark:bg-slate-800/50">
               <div className="text-4xl mb-4">😕</div>
-              <h3 className="text-xl font-bold mb-2 dark:text-white">No providers match your filters</h3>
+              <h3 className="text-xl font-bold mb-2 dark:text-white">No services match your filters</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Try removing filters or change city/category</p>
               <div className="flex justify-center gap-3">
                 <button onClick={clearFilters} className="btn-primary">Reset filters</button>
@@ -229,11 +236,11 @@ export default function ServiceListPage() {
             </div>
           ) : (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {providers.map((provider, index) => {
-                const { Icon, color } = getCategoryIcon(provider.category || 'Other');
+              {services.map((service, index) => {
+                const { Icon, color } = getCategoryIcon(service.category?.name || service.categoryName || 'Other');
                 return (
                   <article
-                    key={provider.id}
+                    key={service.id}
                     className="card-glass p-4 rounded-2xl flex flex-col justify-between hover:translate-y-[-4px] hover:shadow-2xl transition-transform duration-200"
                     style={{ animationDelay: `${index * 40}ms` }}
                   >
@@ -241,52 +248,62 @@ export default function ServiceListPage() {
                       <div className="flex items-start gap-4">
                         <div className={`w-14 h-14 rounded-xl flex items-center justify-center text-white shadow-md ${color || 'bg-gradient-to-br from-primary to-accent'}`}>
                           {Icon ? <Icon className="w-6 h-6" /> : <div className="w-6 h-6 bg-white/30 rounded" />}
-                          {provider.isOnline && <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white" />}
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-[var(--text-primary)] truncate">{provider.name}</h3>
+                          <h3 className="text-lg font-semibold text-[var(--text-primary)] truncate">{service.title}</h3>
                           <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
-                            <FaMapMarkerAlt /> <span className="truncate">{provider.city}, {provider.state}</span>
+                            <span className="label-soft">{service.category?.name || service.categoryName || 'Service'}</span>
+                          </div>
+                          <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
+                            <FaMapMarkerAlt /> <span className="truncate">{service.city}, {service.state}</span>
                           </div>
                         </div>
 
                         <div className="text-right">
-                          {typeof provider.rating === 'number' && provider.reviewCount > 0 ? (
-                            <div className="text-sm">
-                              <div className="flex items-center justify-end gap-1">
-                                <Star size={16} className="text-yellow-400" />
-                                <span className="font-semibold">{provider.rating.toFixed(1)}</span>
-                              </div>
-                              <div className="text-xs text-slate-400">({provider.reviewCount})</div>
-                            </div>
-                          ) : (
-                            <div className="text-xs text-slate-400">No reviews</div>
-                          )}
+                          <div className="text-lg font-bold text-primary">
+                            {formatCurrency(service.price || 0)}
+                          </div>
+                          <div className="text-xs text-slate-400">{service.durationMinutes}min</div>
                         </div>
                       </div>
 
                       <div className="mt-4 bg-white/5 rounded-xl p-3">
-                        <p className="text-sm text-slate-300 mb-2 line-clamp-2">{provider.shortDescription || provider.services?.[0]?.description || 'Experienced local professionals'}</p>
-                        <div className="flex items-center gap-3 text-sm text-slate-400">
-                          <div className="label-soft">{provider.services?.[0]?.durationMinutes ?? '—'} mins</div>
-                          <div className="label-soft">{provider.services?.[0] ? formatCurrency(provider.services[0].basePrice) : 'Price on request'}</div>
-                        </div>
+                        <p className="text-sm text-slate-300 mb-2 line-clamp-2">{service.description || 'Professional service'}</p>
+                        {service.provider && (
+                          <div className="flex items-center gap-2 text-sm text-slate-400 mt-2">
+                            <span className="font-medium text-slate-300">By {service.provider.name}</span>
+                            {service.provider.verified && <MdVerified className="text-blue-500" />}
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div className="mt-4 flex items-center justify-between gap-3">
                       <Link
-                        to={`/providers/${provider.id}`}
+                        to={`/services/${service.id}`}
                         className="btn-ghost flex-1 text-center"
-                        aria-label={`View ${provider.name}`}
+                        aria-label={`View ${service.title}`}
                       >
-                        View
+                        View Details
                       </Link>
 
-                      <a href={`tel:${provider.phone}`} className="btn-primary inline-flex items-center gap-2">
-                        <FaPhone /> Call
-                      </a>
+                      {/* Show Book Now only for customers and guests, not for providers */}
+                      {(!user || user.role?.toUpperCase() === 'CUSTOMER') && (
+                        <Link to={`/bookings/new?service=${service.id}`} className="btn-primary inline-flex items-center gap-2">
+                          Book Now
+                        </Link>
+                      )}
+
+                      {/* For providers, show contact option instead */}
+                      {user && (user.role?.toUpperCase() === 'PROVIDER' || user.role?.toUpperCase() === 'SERVICE_PROVIDER') && service.provider && (
+                        <a
+                          href={`mailto:${service.provider.email || 'contact@example.com'}`}
+                          className="btn-secondary inline-flex items-center gap-2"
+                        >
+                          Contact
+                        </a>
+                      )}
                     </div>
                   </article>
                 );

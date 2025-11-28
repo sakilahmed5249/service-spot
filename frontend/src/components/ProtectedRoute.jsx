@@ -48,10 +48,13 @@ export default function ProtectedRoute({
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // 3) Role check (accepts string or array)
+  // 3) Role check (accepts string or array) - Case insensitive to handle backend variations
   if (role) {
     const allowed = Array.isArray(role) ? role : [role];
-    if (!allowed.includes(user.role)) {
+    const userRole = user.role?.toUpperCase();
+    const allowedUpperCase = allowed.map(r => r?.toUpperCase());
+
+    if (!allowedUpperCase.includes(userRole)) {
       if (typeof onUnauthorized === 'function') {
         try { onUnauthorized({ user, attemptedRole: role, location }); } catch (e) { /* ignore */ }
       }

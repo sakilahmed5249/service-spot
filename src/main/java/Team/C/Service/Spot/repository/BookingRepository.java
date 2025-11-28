@@ -1,4 +1,4 @@
-package Team.C.Service.Spot.repositery;
+package Team.C.Service.Spot.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -192,7 +192,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      * @param status the booking status (COMPLETED)
      * @return number of completed bookings
      */
-    long countByProviderAndStatus(User provider, BookingStatus status);
+
 
     /**
      * Calculate total revenue for provider.
