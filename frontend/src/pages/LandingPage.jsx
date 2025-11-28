@@ -1,36 +1,37 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, MapPin, ArrowRight, TrendingUp } from 'lucide-react';import { SERVICE_CATEGORIES, CITIES } from '../utils/constants';
+import { Search, MapPin, ArrowRight, TrendingUp } from 'lucide-react';
+import { SERVICE_CATEGORIES, CITIES } from '../utils/constants';
 import { getCategoryIcon } from '../utils/categoryIcons';
 import ImageSlider from '../components/ImageSlider';
 
-const LandingPage = () => {
+/* Why: Single-file landing page improved with glassy hero, CTA, and accessible search */
+export default function LandingPage() {
   const navigate = useNavigate();
   const [searchCity, setSearchCity] = useState('');
   const [searchCategory, setSearchCategory] = useState('');
 
-  // Hero slider images
   const heroImages = [
     {
-      url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1200&auto=format&fit=crop',
+      url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1800&auto=format&fit=crop',
       alt: 'Professional Plumbing Services',
       title: 'Expert Plumbing',
       subtitle: 'Fast & Reliable Solutions'
     },
     {
-      url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1200&auto=format&fit=crop',
+      url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1800&auto=format&fit=crop',
       alt: 'Electrical Services',
       title: 'Certified Electricians',
       subtitle: 'Safe & Professional'
     },
     {
-      url: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1200&auto=format&fit=crop',
+      url: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1800&auto=format&fit=crop',
       alt: 'Cleaning Services',
       title: 'Premium Cleaning',
       subtitle: 'Spotless Results'
     },
     {
-      url: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=1200&auto=format&fit=crop',
+      url: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=1800&auto=format&fit=crop',
       alt: 'Carpentry Services',
       title: 'Skilled Carpenters',
       subtitle: 'Quality Craftsmanship'
@@ -38,7 +39,7 @@ const LandingPage = () => {
   ];
 
   const handleSearch = (e) => {
-    e.preventDefault();
+    e?.preventDefault?.();
     const params = new URLSearchParams();
     if (searchCity) params.append('city', searchCity);
     if (searchCategory) params.append('category', searchCategory);
@@ -174,6 +175,4 @@ const LandingPage = () => {
       </section>
     </div>
   );
-};
-
-export default LandingPage;
+}

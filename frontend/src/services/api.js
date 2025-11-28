@@ -1,5 +1,9 @@
 import axios from 'axios';
 
+/**
+ * Replace this with your backend URL when ready (e.g. 'http://localhost:8080/api')
+ * or wire to env var later if you prefer.
+ */
 const API_BASE_URL = 'http://localhost:8080/api';
 
 const api = axios.create({
@@ -7,9 +11,11 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  // optional: avoid hanging requests in dev
+  timeout: 10000,
 });
 
-// Request interceptor to add auth token
+// Request interceptor: attach token if present
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -21,20 +27,28 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for error handling
+// Response interceptor: handle 401 globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // If unauthorized, clear session and navigate to login
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      try {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        // full reload to landing/login — acceptable during early dev
+        window.location.href = '/login';
+      } catch (e) {
+        /* ignore */
+      }
     }
     return Promise.reject(error);
   }
 );
 
-// Customer APIs
+/* ---------------------------
+   Customer APIs
+   --------------------------- */
 export const customerAPI = {
   signup: (data) => api.post('/customer/signup', data),
   login: (data) => api.post('/customer/login', data),
@@ -43,10 +57,15 @@ export const customerAPI = {
   getById: (id) => api.get(`/customer/${id}`),
 };
 
-// Provider APIs
+/* ---------------------------
+   Provider APIs
+   NOTE: providerAPI.login now sends { email } as JSON body.
+   Change this if your backend expects query params or a different payload.
+   --------------------------- */
 export const providerAPI = {
   signup: (data) => api.post('/provider/signup', data),
-  login: (email) => api.post('/provider/login', { params: { email } }),
+  // send email as JSON body (recommended). If backend expects query param, change accordingly.
+  login: (email) => api.post('/provider/login', { email }),
   update: (data) => api.put('/provider/update', data),
   delete: (id) => api.delete(`/provider/delete/${id}`),
   getAll: () => api.get('/provider/all'),
@@ -54,7 +73,9 @@ export const providerAPI = {
   searchByCity: (city) => api.get('/provider/search', { params: { city } }),
 };
 
-// Service APIs (to be implemented in backend)
+/* ---------------------------
+   Service APIs
+   --------------------------- */
 export const serviceAPI = {
   search: (params) => api.get('/services', { params }),
   getById: (id) => api.get(`/services/${id}`),
@@ -64,7 +85,9 @@ export const serviceAPI = {
   delete: (id) => api.delete(`/services/${id}`),
 };
 
-// Booking APIs (to be implemented in backend)
+/* ---------------------------
+   Booking APIs
+   --------------------------- */
 export const bookingAPI = {
   create: (data) => api.post('/bookings', data),
   getByUser: (userId, role) => api.get('/bookings', { params: { userId, role } }),
@@ -73,17 +96,22 @@ export const bookingAPI = {
   cancel: (id) => api.delete(`/bookings/${id}`),
 };
 
-// Review APIs (to be implemented in backend)
+/* ---------------------------
+   Review APIs
+   --------------------------- */
 export const reviewAPI = {
   create: (data) => api.post('/reviews', data),
   getByProvider: (providerId) => api.get(`/providers/${providerId}/reviews`),
   getByBooking: (bookingId) => api.get(`/reviews/booking/${bookingId}`),
 };
 
-// Availability APIs (to be implemented in backend)
+/* ---------------------------
+   Availability APIs
+   --------------------------- */
 export const availabilityAPI = {
   create: (data) => api.post('/availability', data),
-  getByProvider: (providerId, date) => api.get(`/availability/provider/${providerId}`, { params: { date } }),
+  getByProvider: (providerId, date) =>
+    api.get(`/availability/provider/${providerId}`, { params: { date } }),
   update: (id, data) => api.put(`/availability/${id}`, data),
   delete: (id) => api.delete(`/availability/${id}`),
 };

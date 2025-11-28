@@ -1,11 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class', // toggle dark glass UI with `class="dark"` or `class="theme-dark"`
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
+      /* COLOR SYSTEM
+         - primary/secondary/accent: your brand
+         - brand: single stops for quick gradient building
+         - trust: neutrals for fintech-like whitespace & text
+         - glass: translucent tints for glassmorphism
+      */
       colors: {
         primary: {
           DEFAULT: '#9333EA',
@@ -46,16 +53,52 @@ export default {
           800: '#155E75',
           900: '#164E63',
         },
+
+        /* extras for UI system */
+        brand: { // convenient gradient endpoints
+          purple: '#6C5CE7',
+          teal: '#00BFA6',
+        },
+
+        trust: { // fintech neutrals
+          900: '#0F1724',
+          800: '#111827',
+          700: '#0B1220',
+          600: '#334155',
+          400: '#94A3B8',
+          100: '#E6EEF2',
+        },
+
+        glass: {
+          light: 'rgba(255,255,255,0.06)',
+          mid: 'rgba(255,255,255,0.04)',
+          dark: 'rgba(12,17,23,0.36)',
+        },
+
+        success: {
+          DEFAULT: '#10B981',
+          600: '#059669'
+        },
+        danger: {
+          DEFAULT: '#EF4444',
+          600: '#DC2626'
+        },
       },
+
+      /* TYPOGRAPHY */
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
         display: ['Poppins', 'system-ui', 'sans-serif'],
       },
+
+      /* ANIMATIONS / KEYFRAMES (adds pop, float-slow) */
       animation: {
         'gradient': 'gradient 15s ease infinite',
         'shimmer': 'shimmer 1.5s infinite',
         'float': 'float 3s ease-in-out infinite',
+        'float-slow': 'float 6s ease-in-out infinite',
         'pulse': 'pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'pop': 'pop .36s ease-out',
         'slide-in-up': 'slideInUp 0.6s ease-out forwards',
         'fade-in': 'fadeIn 0.8s ease-out forwards',
       },
@@ -64,32 +107,57 @@ export default {
           '0%, 100%': { backgroundPosition: '0% 50%' },
           '50%': { backgroundPosition: '100% 50%' },
         },
-        shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
-        float: {
-          '0%, 100%': { transform: 'translateY(0px)' },
-          '50%': { transform: 'translateY(-10px)' },
-        },
-        pulse: {
-          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
-          '50%': { opacity: '0.6', transform: 'scale(1.3)' },
-        },
-        slideInUp: {
-          from: { opacity: '0', transform: 'translateY(30px)' },
-          to: { opacity: '1', transform: 'translateY(0)' },
-        },
-        fadeIn: {
-          from: { opacity: '0' },
-          to: { opacity: '1' },
-        },
+        shimmer: { '0%': { backgroundPosition: '-200% 0' }, '100%': { backgroundPosition: '200% 0' } },
+        float: { '0%, 100%': { transform: 'translateY(0px)' }, '50%': { transform: 'translateY(-10px)' } },
+        pulse:  { '0%,100%': { opacity: '1', transform: 'scale(1)' }, '50%': { opacity: '.6', transform: 'scale(1.3)' } },
+        pop:    { '0%': { transform: 'scale(.96)' }, '60%': { transform: 'scale(1.02)' }, '100%': { transform: 'scale(1)' } },
+        slideInUp: { from: { opacity: '0', transform: 'translateY(30px)' }, to: { opacity: '1', transform: 'translateY(0)' } },
+        fadeIn: { from: { opacity: '0' }, to: { opacity: '1' } },
       },
+
+      /* DEPTH & SHAPE */
       boxShadow: {
-        'glow': '0 0 20px rgba(59, 130, 246, 0.5)',
-        'glow-lg': '0 0 30px rgba(59, 130, 246, 0.6)',
+        'soft-lg': '0 10px 30px rgba(2,6,23,0.12)',
+        'glass-md': '0 8px 20px rgba(12,17,23,0.08)',
+        'soft-glow': '0 12px 40px rgba(108,92,231,0.12)',
+        'strong': '0 22px 60px rgba(2,6,23,0.6)',
+        'glow': '0 0 20px rgba(99,102,241,0.16)',
+        'glow-lg': '0 0 30px rgba(99,102,241,0.22)',
+      },
+
+      borderRadius: {
+        'xl-2': '18px',
+        '2xl-2': '22px',
+        'rounder': '28px',
+      },
+
+      /* BACKDROP utility options */
+      backdropBlur: {
+        xs: '2px',
+        sm: '4px',
+        md: '8px',
+        lg: '12px',
+      },
+
+      /* small helpful spacing tokens */
+      spacing: {
+        '72': '18rem',
+        '84': '21rem',
+        '96': '24rem',
+      },
+
+      /* put commonly used z-index values */
+      zIndex: {
+        '60': '60',
+        '70': '70',
+        '90': '90'
       },
     },
   },
-  plugins: [],
+  plugins: [
+    require('@tailwindcss/forms'),
+    require('@tailwindcss/typography'),
+    require('@tailwindcss/aspect-ratio'),
+    // optional: require('@tailwindcss/line-clamp'),
+  ],
 }
