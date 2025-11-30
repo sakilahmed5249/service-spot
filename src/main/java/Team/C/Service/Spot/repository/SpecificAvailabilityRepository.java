@@ -57,10 +57,16 @@ public interface SpecificAvailabilityRepository extends JpaRepository<SpecificAv
 
     /**
      * Find available slots for a provider between dates
+     * Only returns slots that are:
+     * - marked as available (isAvailable = true)
+     * - have capacity (currentBookings < maxBookings OR maxBookings is null)
+     * - in the future or today
      */
     @Query("SELECT sa FROM SpecificAvailability sa WHERE sa.provider = :provider " +
            "AND sa.availableDate BETWEEN :startDate AND :endDate " +
+           "AND sa.availableDate >= CURRENT_DATE " +
            "AND sa.isAvailable = true " +
+           "AND (sa.maxBookings IS NULL OR sa.currentBookings < sa.maxBookings) " +
            "ORDER BY sa.availableDate ASC, sa.startTime ASC")
     List<SpecificAvailability> findAvailableSlotsByProviderAndDateRange(
             @Param("provider") User provider,
@@ -69,10 +75,16 @@ public interface SpecificAvailabilityRepository extends JpaRepository<SpecificAv
 
     /**
      * Find available slots for a service between dates
+     * Only returns slots that are:
+     * - marked as available (isAvailable = true)
+     * - have capacity (currentBookings < maxBookings OR maxBookings is null)
+     * - in the future or today
      */
     @Query("SELECT sa FROM SpecificAvailability sa WHERE sa.serviceListing = :service " +
            "AND sa.availableDate BETWEEN :startDate AND :endDate " +
+           "AND sa.availableDate >= CURRENT_DATE " +
            "AND sa.isAvailable = true " +
+           "AND (sa.maxBookings IS NULL OR sa.currentBookings < sa.maxBookings) " +
            "ORDER BY sa.availableDate ASC, sa.startTime ASC")
     List<SpecificAvailability> findAvailableSlotsByServiceAndDateRange(
             @Param("service") ServiceListing service,

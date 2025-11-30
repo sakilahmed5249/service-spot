@@ -37,9 +37,18 @@ function CalendarMonth({ year, month, providerId, serviceId, selectedDate, onSel
     setError('');
     setAvailability({});
     try {
-      // Calculate month date range
-      const startDate = new Date(y, m, 1).toISOString().split('T')[0];
-      const endDate = new Date(y, m + 1, 0).toISOString().split('T')[0];
+      // Helper to format date locally
+      const getLocalDate = (year, month, day) => {
+        const yStr = String(year).padStart(4, '0');
+        const mStr = String(month + 1).padStart(2, '0');
+        const dStr = String(day).padStart(2, '0');
+        return `${yStr}-${mStr}-${dStr}`;
+      };
+
+      // Calculate month date range without timezone conversion
+      const startDate = getLocalDate(y, m, 1);
+      const daysInMonth = new Date(y, m + 1, 0).getDate();
+      const endDate = getLocalDate(y, m, daysInMonth);
 
       // Fetch provider's specific availability for this month
       const res = await specificAvailabilityAPI.getAvailableDates(providerId, startDate, endDate);
@@ -50,15 +59,12 @@ function CalendarMonth({ year, month, providerId, serviceId, selectedDate, onSel
       // Build map of available dates
       const map = {};
       const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      const todayStr = getLocalDate(today.getFullYear(), today.getMonth(), today.getDate());
 
-      // Mark each available date
+      // Mark each available date (only future dates)
       availableDates.forEach(dateStr => {
-        const date = new Date(dateStr);
-        date.setHours(0, 0, 0, 0);
-
-        // Skip past dates
-        if (date >= today) {
+        // Simple string comparison works for YYYY-MM-DD format
+        if (dateStr >= todayStr) {
           map[dateStr] = {
             count: 1, // Will be updated with actual slot count
             available: true,
@@ -87,6 +93,14 @@ function CalendarMonth({ year, month, providerId, serviceId, selectedDate, onSel
     fetchMonth(cursor.year, cursor.month);
   }, [cursor.year, cursor.month, fetchMonth]);
 
+  // Helper to get YYYY-MM-DD without timezone conversion
+  const getLocalISODate = (year, month, day) => {
+    const y = String(year).padStart(4, '0');
+    const m = String(month + 1).padStart(2, '0'); // month is 0-indexed
+    const d = String(day).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   // helpers to build month grid
   const buildMonthGrid = (y, m) => {
     const firstOfMonth = new Date(y, m, 1);
@@ -106,19 +120,16 @@ function CalendarMonth({ year, month, providerId, serviceId, selectedDate, onSel
       if (dayNumber <= 0) {
         // previous month
         const d = daysPrevMonth + dayNumber;
-        const dt = new Date(y, m - 1, d);
-        const iso = dt.toISOString().split('T')[0];
+        const iso = getLocalISODate(y, m - 1, d);
         cell = { date: d, inMonth: false, iso };
       } else if (dayNumber > daysInMonth) {
         // next month
         const d = dayNumber - daysInMonth;
-        const dt = new Date(y, m + 1, d);
-        const iso = dt.toISOString().split('T')[0];
+        const iso = getLocalISODate(y, m + 1, d);
         cell = { date: d, inMonth: false, iso };
       } else {
         // current month
-        const dt = new Date(y, m, dayNumber);
-        const iso = dt.toISOString().split('T')[0];
+        const iso = getLocalISODate(y, m, dayNumber);
         cell = { date: dayNumber, inMonth: true, iso };
       }
       grid.push(cell);
@@ -127,7 +138,8 @@ function CalendarMonth({ year, month, providerId, serviceId, selectedDate, onSel
   };
 
   const grid = buildMonthGrid(cursor.year, cursor.month);
-  const todayIso = new Date().toISOString().split('T')[0];
+  const today = new Date();
+  const todayIso = getLocalISODate(today.getFullYear(), today.getMonth(), today.getDate());
 
   // keyboard navigation within calendar grid
   useEffect(() => {

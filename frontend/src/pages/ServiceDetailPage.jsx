@@ -67,14 +67,20 @@ import Modal from '../components/Modal';
  */
 
 /**
- * Generates today's date in ISO format (YYYY-MM-DD)
+ * Generates today's date in ISO format (YYYY-MM-DD) without timezone conversion
  *
  * @function todayISO
  * @returns {string} Current date in ISO format (e.g., "2025-11-29")
  * @example
  * const today = todayISO(); // "2025-11-29"
  */
-const todayISO = () => new Date().toISOString().split('T')[0];
+const todayISO = () => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
 /**
  * Generates an array of Date objects for all days in a given month,
@@ -153,9 +159,20 @@ function AvailabilityCalendar({ providerId, serviceId, onSelect }) {
     async function fetchAvailability() {
       setLoading(true);
       try {
-        // Calculate month date range
-        const startDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1).toISOString().split('T')[0];
-        const endDate = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).toISOString().split('T')[0];
+        // Helper to format date locally without timezone conversion
+        const getLocalDate = (year, month, day) => {
+          const yStr = String(year).padStart(4, '0');
+          const mStr = String(month + 1).padStart(2, '0');
+          const dStr = String(day).padStart(2, '0');
+          return `${yStr}-${mStr}-${dStr}`;
+        };
+
+        // Calculate month date range without timezone conversion
+        const year = monthStart.getFullYear();
+        const month = monthStart.getMonth();
+        const startDate = getLocalDate(year, month, 1);
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const endDate = getLocalDate(year, month, daysInMonth);
 
         // Fetch provider's specific availability dates for this month
         const res = await specificAvailabilityAPI.getAvailableDates(providerId, startDate, endDate);
@@ -218,10 +235,17 @@ function AvailabilityCalendar({ providerId, serviceId, onSelect }) {
           <div className="grid grid-cols-7 gap-2">
             {monthDays.map((d, idx) => {
               if (!d) return <div key={idx} className="py-3" aria-hidden />;
-              const iso = d.toISOString().split('T')[0];
-              const isToday = iso === new Date().toISOString().split('T')[0];
+
+              // Format date without timezone conversion
+              const year = d.getFullYear();
+              const month = String(d.getMonth() + 1).padStart(2, '0');
+              const day = String(d.getDate()).padStart(2, '0');
+              const iso = `${year}-${month}-${day}`;
+
+              const today = todayISO();
+              const isToday = iso === today;
               const available = availableDates.has(iso);
-              const disabled = !available || d < new Date(todayISO());
+              const disabled = !available || iso < today;
               return (
                 <button
                   key={iso}

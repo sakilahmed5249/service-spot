@@ -38,6 +38,15 @@ public interface ServiceListingRepository extends JpaRepository<ServiceListing, 
     List<ServiceListing> findByProvider(User provider);
 
     /**
+     * Find all service listings by provider ID.
+     * Used for cascading deletion when provider is deleted.
+     *
+     * @param providerId the provider ID
+     * @return list of listings by the provider
+     */
+    List<ServiceListing> findByProviderId(Long providerId);
+
+    /**
      * Find active service listings by provider.
      *
      * @param provider the provider user
@@ -170,4 +179,3 @@ public interface ServiceListingRepository extends JpaRepository<ServiceListing, 
      */
     long countByCategory(ServiceCategory category);
 }
-

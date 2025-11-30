@@ -94,8 +94,32 @@ export const STATES = [
   'West Bengal',
 ];
 
-// Format date
+// Format date - Fixed to handle timezone issues
 export const formatDate = (dateString) => {
+  if (!dateString) return '';
+
+  // If it's already a Date object, use it directly
+  if (dateString instanceof Date) {
+    return dateString.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
+  // Handle YYYY-MM-DD format without timezone conversion
+  if (typeof dateString === 'string' && dateString.includes('-')) {
+    const [year, month, day] = dateString.split('T')[0].split('-').map(Number);
+    // Create date in local timezone (not UTC)
+    const date = new Date(year, month - 1, day);
+    return date.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
+  // Fallback for other formats
   const date = new Date(dateString);
   return date.toLocaleDateString('en-IN', {
     year: 'numeric',

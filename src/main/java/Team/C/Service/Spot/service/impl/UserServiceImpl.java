@@ -10,6 +10,10 @@ import Team.C.Service.Spot.mapper.UserMapper;
 import Team.C.Service.Spot.model.User;
 import Team.C.Service.Spot.model.enums.Role;
 import Team.C.Service.Spot.repository.UserRepository;
+import Team.C.Service.Spot.repository.ServiceListingRepository;
+import Team.C.Service.Spot.repository.BookingRepository;
+import Team.C.Service.Spot.repository.SpecificAvailabilityRepository;
+import Team.C.Service.Spot.repository.ReviewRepository;
 import Team.C.Service.Spot.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,6 +40,10 @@ import java.util.stream.Collectors;
 public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
+    private final ServiceListingRepository serviceListingRepository;
+    private final BookingRepository bookingRepository;
+    private final SpecificAvailabilityRepository specificAvailabilityRepository;
+    private final ReviewRepository reviewRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
 
@@ -270,11 +278,12 @@ public class UserServiceImpl implements UserService {
      * Delete user account.
      * Performs HARD DELETE - permanently removes user from database.
      * This is used by admin to completely remove users from the system.
+     * Handles cascading deletion of all related data.
      */
     @Override
     @Transactional
     public void deleteUser(Long id) {
-        log.info("Deleting user with ID: {}", id);
+        log.info("=== STARTING USER DELETION: ID {} ===", id);
 
         User user = userRepository.findById(id)
                 .orElseThrow(() -> {
@@ -282,10 +291,80 @@ public class UserServiceImpl implements UserService {
                     return new IllegalArgumentException("User not found with ID: " + id);
                 });
 
+        log.info("Deleting user: {} ({}), Role: {}", user.getName(), user.getEmail(), user.getRole());
+
+        // If provider, delete all related data in correct order
+        if (user.getRole() == Role.PROVIDER) {
+            log.info("Provider deletion - removing related data...");
+
+            // Get provider's service listings
+            var services = serviceListingRepository.findByProviderId(id);
+            log.info("Found {} service listings", services.size());
+
+            // For each service, delete related data
+            for (var service : services) {
+                Long serviceId = service.getId();
+
+                // Delete reviews on this service
+                var reviews = reviewRepository.findByServiceListingId(serviceId);
+                if (!reviews.isEmpty()) {
+                    reviewRepository.deleteAll(reviews);
+                    log.info("Deleted {} reviews for service {}", reviews.size(), serviceId);
+                }
+
+                // Delete bookings for this service
+                var bookings = bookingRepository.findByServiceListingId(serviceId);
+                if (!bookings.isEmpty()) {
+                    bookingRepository.deleteAll(bookings);
+                    log.info("Deleted {} bookings for service {}", bookings.size(), serviceId);
+                }
+
+                // Delete specific availability for this service
+                var availability = specificAvailabilityRepository.findByServiceListing(service);
+                if (!availability.isEmpty()) {
+                    specificAvailabilityRepository.deleteAll(availability);
+                    log.info("Deleted {} availability records for service {}", availability.size(), serviceId);
+                }
+            }
+
+            // Delete all provider's specific availability (not tied to specific service)
+            var providerAvailability = specificAvailabilityRepository.findByProvider(user);
+            if (!providerAvailability.isEmpty()) {
+                specificAvailabilityRepository.deleteAll(providerAvailability);
+                log.info("Deleted {} general availability records for provider", providerAvailability.size());
+            }
+
+            // Finally, delete all service listings
+            if (!services.isEmpty()) {
+                serviceListingRepository.deleteAll(services);
+                log.info("Deleted {} service listings", services.size());
+            }
+        }
+
+        // If customer, delete their bookings and reviews
+        if (user.getRole() == Role.CUSTOMER) {
+            log.info("Customer deletion - removing related data...");
+
+            // Delete customer's bookings
+            var customerBookings = bookingRepository.findByCustomerId(id);
+            if (!customerBookings.isEmpty()) {
+                bookingRepository.deleteAll(customerBookings);
+                log.info("Deleted {} bookings for customer", customerBookings.size());
+            }
+
+            // Delete customer's reviews
+            var customerReviews = reviewRepository.findByCustomerId(id);
+            if (!customerReviews.isEmpty()) {
+                reviewRepository.deleteAll(customerReviews);
+                log.info("Deleted {} reviews by customer", customerReviews.size());
+            }
+        }
+
         // Hard delete - permanently remove from database
         userRepository.deleteById(id);
 
-        log.info("Successfully permanently deleted user: {} (ID: {})", user.getName(), id);
+        log.info("✅ Successfully permanently deleted user: {} (ID: {})", user.getName(), id);
+        log.info("=== USER DELETION COMPLETE ===");
     }
 
     /**

@@ -117,68 +117,68 @@ export default function CustomerDashboard() {
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {/* Total Bookings */}
-          <div className="bg-white shadow-lg border border-gray-200 p-6 rounded-2xl">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 shadow-lg border border-blue-200 p-6 rounded-2xl">
             <div className="flex items-center justify-between mb-4">
               <div className="feature-icon">
                 <Calendar size={24} />
               </div>
-              <TrendingUp className="text-green-400" size={20} />
+              <TrendingUp className="text-blue-600" size={20} />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">
+            <h3 className="text-2xl font-bold text-blue-900 mb-1">
               {statistics?.totalBookings || 0}
             </h3>
-            <p className="text-sm text-gray-600">Total Bookings</p>
-            <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+            <p className="text-sm text-blue-700">Total Bookings</p>
+            <div className="mt-3 pt-3 border-t border-blue-200 text-xs text-blue-600">
               <span>Completed: {statistics?.completedBookings || 0}</span>
             </div>
           </div>
 
           {/* Active Bookings */}
-          <div className="bg-white shadow-lg border border-gray-200 p-6 rounded-2xl">
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 shadow-lg border border-purple-200 p-6 rounded-2xl">
             <div className="flex items-center justify-between mb-4">
               <div className="feature-icon from-purple-500 to-pink-500">
                 <Clock size={24} />
               </div>
-              <CheckCircle className="text-green-400" size={20} />
+              <CheckCircle className="text-purple-600" size={20} />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">
+            <h3 className="text-2xl font-bold text-purple-900 mb-1">
               {statistics?.activeBookings || 0}
             </h3>
-            <p className="text-sm text-gray-600">Active Bookings</p>
-            <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+            <p className="text-sm text-purple-700">Active Bookings</p>
+            <div className="mt-3 pt-3 border-t border-purple-200 text-xs text-purple-600">
               <span>Upcoming: {statistics?.upcomingBookings || 0}</span>
             </div>
           </div>
 
           {/* Total Spent */}
-          <div className="bg-white shadow-lg border border-gray-200 p-6 rounded-2xl">
+          <div className="bg-gradient-to-br from-green-50 to-green-100 shadow-lg border border-green-200 p-6 rounded-2xl">
             <div className="flex items-center justify-between mb-4">
               <div className="feature-icon from-green-500 to-teal-500">
                 <DollarSign size={24} />
               </div>
-              <TrendingUp className="text-green-400" size={20} />
+              <TrendingUp className="text-green-600" size={20} />
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">
+            <h3 className="text-2xl font-bold text-green-900 mb-1">
               {formatCurrency(statistics?.totalSpent || 0)}
             </h3>
-            <p className="text-sm text-gray-600">Total Spent</p>
-            <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+            <p className="text-sm text-green-700">Total Spent</p>
+            <div className="mt-3 pt-3 border-t border-green-200 text-xs text-green-600">
               <span>This Month: {formatCurrency(statistics?.thisMonthSpent || 0)}</span>
             </div>
           </div>
 
           {/* Average Booking */}
-          <div className="bg-white shadow-lg border border-gray-200 p-6 rounded-2xl">
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 shadow-lg border border-orange-200 p-6 rounded-2xl">
             <div className="flex items-center justify-between mb-4">
               <div className="feature-icon from-orange-500 to-red-500">
                 <Star size={24} />
               </div>
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-1">
+            <h3 className="text-2xl font-bold text-orange-900 mb-1">
               {formatCurrency(statistics?.averageBookingValue || 0)}
             </h3>
-            <p className="text-sm text-gray-600">Avg. Booking Value</p>
-            <div className="mt-3 pt-3 border-t border-gray-200 text-xs text-gray-500">
+            <p className="text-sm text-orange-700">Avg. Booking Value</p>
+            <div className="mt-3 pt-3 border-t border-orange-200 text-xs text-orange-600">
               <span>Services Used: {statistics?.uniqueServicesBooked || 0}</span>
             </div>
           </div>

@@ -52,6 +52,20 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     List<Review> findByCustomerOrderByCreatedAtDesc(User customer);
 
     /**
+     * Find all reviews for bookings of a specific service listing.
+     * Used for cascading deletion when service is deleted.
+     */
+    @Query("SELECT r FROM Review r WHERE r.booking.serviceListing.id = :serviceListingId")
+    List<Review> findByServiceListingId(@Param("serviceListingId") Long serviceListingId);
+
+    /**
+     * Find all reviews by customer ID.
+     * Used for cascading deletion when customer is deleted.
+     */
+    @Query("SELECT r FROM Review r WHERE r.customer.id = :customerId")
+    List<Review> findByCustomerId(@Param("customerId") Long customerId);
+
+    /**
      * Find reviews by provider with specific rating.
      */
     List<Review> findByProviderAndRating(User provider, Integer rating);

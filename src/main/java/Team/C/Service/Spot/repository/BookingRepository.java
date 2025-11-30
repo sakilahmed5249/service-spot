@@ -173,6 +173,7 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      *
      * @param provider the provider user
      * @return total number of bookings
+     */
     /**
      * Count bookings by provider.
      *
@@ -243,5 +244,18 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
         ServiceListing serviceListing,
         LocalDate bookingDate
     );
-}
 
+    /**
+     * Find all bookings for a specific service listing.
+     * Used for cascading deletion when service is deleted.
+     */
+    @Query("SELECT b FROM Booking b WHERE b.serviceListing.id = :serviceListingId")
+    List<Booking> findByServiceListingId(@Param("serviceListingId") Long serviceListingId);
+
+    /**
+     * Find all bookings by customer ID.
+     * Used for cascading deletion when customer is deleted.
+     */
+    @Query("SELECT b FROM Booking b WHERE b.customer.id = :customerId")
+    List<Booking> findByCustomerId(@Param("customerId") Long customerId);
+}

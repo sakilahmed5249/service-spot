@@ -85,6 +85,7 @@ public class SpecificAvailabilityController {
 
     /**
      * Get available dates for a provider in a date range
+     * No caching to ensure fresh availability data after bookings
      */
     @GetMapping("/provider/{providerId}/dates")
     public ResponseEntity<ApiResponse<List<LocalDate>>> getAvailableDates(
@@ -92,8 +93,15 @@ public class SpecificAvailabilityController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
+        log.info("📅 Fetching available dates for provider {} from {} to {}", providerId, startDate, endDate);
         List<LocalDate> dates = availabilityService.getAvailableDates(providerId, startDate, endDate);
-        return ResponseEntity.ok(ApiResponse.success("Available dates retrieved successfully", dates));
+        log.info("✅ Returning {} available dates", dates.size());
+
+        return ResponseEntity.ok()
+                .cacheControl(org.springframework.http.CacheControl.noCache().noStore())
+                .header("Pragma", "no-cache")
+                .header("Expires", "0")
+                .body(ApiResponse.success("Available dates retrieved successfully", dates));
     }
 
     /**
@@ -111,14 +119,22 @@ public class SpecificAvailabilityController {
 
     /**
      * Get time slots for a specific date
+     * No caching to ensure real-time slot availability after bookings
      */
     @GetMapping("/provider/{providerId}/slots")
     public ResponseEntity<ApiResponse<List<SpecificAvailabilityResponse>>> getTimeSlotsForDate(
             @PathVariable Long providerId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
+        log.info("🕐 Fetching time slots for provider {} on {}", providerId, date);
         List<SpecificAvailabilityResponse> slots = availabilityService.getTimeSlotsForDate(providerId, date);
-        return ResponseEntity.ok(ApiResponse.success("Time slots retrieved successfully", slots));
+        log.info("✅ Returning {} time slots", slots.size());
+
+        return ResponseEntity.ok()
+                .cacheControl(org.springframework.http.CacheControl.noCache().noStore())
+                .header("Pragma", "no-cache")
+                .header("Expires", "0")
+                .body(ApiResponse.success("Time slots retrieved successfully", slots));
     }
 
     /**

@@ -189,17 +189,52 @@ const ProviderDashboard = () => {
   };
 
   /* Handler for Edit Service button */
-  const handleEditService = (serviceId) => {
+  const handleEditService = async (serviceId) => {
     const service = services.find(s => s.id === serviceId);
     setSelectedService(service);
-    setServiceForm({
-      title: service.title || '',
-      description: service.description || '',
-      price: service.price || service.basePrice || '',
-      category: service.category?.name || service.categoryName || '',
-      durationMinutes: service.durationMinutes || '60',
-      availabilitySlots: [], // Will be loaded separately if needed
-    });
+
+    // Load existing availability slots for this service
+    try {
+      const availabilityResponse = await specificAvailabilityAPI.getByService(serviceId, false); // Get all, not just future
+      const existingSlots = availabilityResponse.data?.data || [];
+
+      // Convert backend format to form format
+      const formattedSlots = existingSlots.map(slot => ({
+        id: slot.id, // Keep track of existing slot IDs
+        date: slot.availableDate,
+        startTime: slot.startTime?.substring(0, 5) || '09:00', // Remove seconds
+        endTime: slot.endTime?.substring(0, 5) || '17:00',
+        maxBookings: slot.maxBookings || '1'
+      }));
+
+      console.log('Loaded existing availability slots:', formattedSlots);
+
+      setServiceForm({
+        title: service.title || '',
+        description: service.description || '',
+        price: service.price || service.basePrice || '',
+        category: service.category?.name || service.categoryName || '',
+        durationMinutes: service.durationMinutes || '60',
+        availabilitySlots: formattedSlots.length > 0 ? formattedSlots : [
+          // Add one empty slot if no existing slots
+          { date: new Date().toISOString().split('T')[0], startTime: '09:00', endTime: '17:00', maxBookings: '1' }
+        ],
+      });
+    } catch (error) {
+      console.error('Error loading availability slots:', error);
+      // Fallback if loading fails
+      setServiceForm({
+        title: service.title || '',
+        description: service.description || '',
+        price: service.price || service.basePrice || '',
+        category: service.category?.name || service.categoryName || '',
+        durationMinutes: service.durationMinutes || '60',
+        availabilitySlots: [
+          { date: new Date().toISOString().split('T')[0], startTime: '09:00', endTime: '17:00', maxBookings: '1' }
+        ],
+      });
+    }
+
     setServiceFormErrors({});
     setShowServiceModal(true);
   };
@@ -211,12 +246,32 @@ const ProviderDashboard = () => {
       ...prev,
       availabilitySlots: [
         ...prev.availabilitySlots,
-        { date: today, startTime: '09:00', endTime: '17:00', maxBookings: '1' }
+        { date: today, startTime: '09:00', endTime: '17:00', maxBookings: '1', isNew: true }
       ]
     }));
   };
 
-  const handleRemoveAvailabilitySlot = (index) => {
+  const handleRemoveAvailabilitySlot = async (index) => {
+    const slot = serviceForm.availabilitySlots[index];
+
+    // If slot has an ID, it's an existing slot - delete from backend
+    if (slot.id) {
+      if (!window.confirm('This will permanently delete this availability slot. Are you sure?')) {
+        return;
+      }
+
+      try {
+        await specificAvailabilityAPI.delete(slot.id);
+        console.log('Deleted availability slot:', slot.id);
+        alert('Availability slot deleted successfully!');
+      } catch (error) {
+        console.error('Error deleting availability slot:', error);
+        alert('Failed to delete availability slot. Please try again.');
+        return; // Don't remove from UI if backend deletion failed
+      }
+    }
+
+    // Remove from form state
     setServiceForm(prev => ({
       ...prev,
       availabilitySlots: prev.availabilitySlots.filter((_, i) => i !== index)
@@ -307,14 +362,19 @@ const ProviderDashboard = () => {
         console.log('Service created successfully with ID:', createdServiceId);
       }
 
-      // Create availability slots if any
+      // Create/Update availability slots for both new and edited services
       if (serviceForm.availabilitySlots.length > 0 && createdServiceId) {
-        console.log('Creating availability slots for service:', createdServiceId);
+        console.log('Processing availability slots for service:', createdServiceId);
+
+        let successCount = 0;
+        let failCount = 0;
+        let updateCount = 0;
 
         for (const slot of serviceForm.availabilitySlots) {
           // Validate slot has required fields
           if (!slot.date || !slot.startTime || !slot.endTime) {
             console.warn('Skipping invalid slot:', slot);
+            failCount++;
             continue;
           }
 
@@ -328,16 +388,47 @@ const ProviderDashboard = () => {
               maxBookings: slot.maxBookings ? parseInt(slot.maxBookings) : null,
             };
 
-            await specificAvailabilityAPI.create(availabilityData);
-            console.log('Created availability slot:', availabilityData);
+            if (slot.id) {
+              // Update existing slot
+              await specificAvailabilityAPI.update(slot.id, availabilityData);
+              console.log('Updated availability slot:', slot.id, availabilityData);
+              updateCount++;
+            } else {
+              // Create new slot
+              await specificAvailabilityAPI.create(availabilityData);
+              console.log('Created availability slot:', availabilityData);
+              successCount++;
+            }
           } catch (slotError) {
-            console.error('Error creating availability slot:', slotError);
+            console.error('Error processing availability slot:', slotError);
+            console.error('Slot data:', slot);
+            console.error('Error response:', slotError.response?.data);
+            failCount++;
             // Continue with other slots even if one fails
           }
         }
+
+        // Show detailed result message
+        const totalSuccess = successCount + updateCount;
+        if (totalSuccess > 0 && failCount === 0) {
+          const msg = [];
+          if (successCount > 0) msg.push(`✅ ${successCount} new slot(s) added`);
+          if (updateCount > 0) msg.push(`✅ ${updateCount} slot(s) updated`);
+          alert(`${selectedService ? 'Service updated' : 'Service created'} successfully!\n${msg.join('\n')}`);
+        } else if (totalSuccess > 0 && failCount > 0) {
+          const msg = [];
+          if (successCount > 0) msg.push(`✅ ${successCount} new slot(s) added`);
+          if (updateCount > 0) msg.push(`✅ ${updateCount} slot(s) updated`);
+          msg.push(`⚠️ ${failCount} slot(s) failed (check console)`);
+          alert(`${selectedService ? 'Service updated' : 'Service created'} successfully!\n${msg.join('\n')}`);
+        } else if (failCount > 0) {
+          alert(`${selectedService ? 'Service updated' : 'Service created'} successfully!\n⚠️ All ${failCount} slot(s) failed (check console for details)`);
+        }
+      } else {
+        // No slots provided
+        alert(selectedService ? 'Service updated successfully!' : 'Service created successfully!\n⚠️ No availability slots added. Add slots to allow bookings.');
       }
 
-      alert(selectedService ? 'Service updated successfully!' : 'Service created successfully with availability slots!');
       setShowServiceModal(false);
       fetchDashboardData(); // Refresh the services list
     } catch (error) {
@@ -570,36 +661,36 @@ const ProviderDashboard = () => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto">
-          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-white border border-gray-200">
+          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
             <div>
-              <p className="text-sm text-gray-600">Total</p>
-              <p className="text-2xl font-bold text-primary">{stats.totalBookings}</p>
+              <p className="text-sm text-blue-700">Total</p>
+              <p className="text-2xl font-bold text-blue-900">{stats.totalBookings}</p>
             </div>
-            <Users size={32} className="text-primary opacity-60" />
+            <Users size={32} className="text-blue-600 opacity-60" />
           </div>
 
-          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-white border border-gray-200">
+          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200">
             <div>
-              <p className="text-sm text-gray-600">Pending</p>
-              <p className="text-2xl font-bold text-yellow-600">{stats.pendingBookings}</p>
+              <p className="text-sm text-yellow-700">Pending</p>
+              <p className="text-2xl font-bold text-yellow-900">{stats.pendingBookings}</p>
             </div>
-            <AlertCircle size={32} className="text-yellow-500 opacity-60" />
+            <AlertCircle size={32} className="text-yellow-600 opacity-60" />
           </div>
 
-          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-white border border-gray-200">
+          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-gradient-to-br from-green-50 to-green-100 border border-green-200">
             <div>
-              <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-green-600">{stats.completedBookings}</p>
+              <p className="text-sm text-green-700">Completed</p>
+              <p className="text-2xl font-bold text-green-900">{stats.completedBookings}</p>
             </div>
-            <CheckCircle size={32} className="text-green-500 opacity-60" />
+            <CheckCircle size={32} className="text-green-600 opacity-60" />
           </div>
 
-          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-white border border-gray-200">
+          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200">
             <div>
-              <p className="text-sm text-gray-600">Revenue</p>
-              <p className="text-2xl font-bold text-purple-600">{formatCurrency(stats.totalRevenue)}</p>
+              <p className="text-sm text-purple-700">Revenue</p>
+              <p className="text-2xl font-bold text-purple-900">{formatCurrency(stats.totalRevenue)}</p>
             </div>
-            <DollarSign size={32} className="text-purple-500 opacity-60" />
+            <DollarSign size={32} className="text-purple-600 opacity-60" />
           </div>
         </div>
       </header>
@@ -742,8 +833,8 @@ const ProviderDashboard = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-slate-400">City</label>
-              <div className="mt-1 font-medium text-white">{user?.city}</div>
+              <label className="block text-sm text-gray-600">City</label>
+              <div className="mt-1 font-medium text-gray-900">{user?.city}</div>
             </div>
 
             <div className="md:col-span-2">
@@ -905,7 +996,19 @@ const ProviderDashboard = () => {
             ) : (
               <div className="space-y-3 max-h-64 overflow-y-auto">
                 {serviceForm.availabilitySlots.map((slot, index) => (
-                  <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-3">
+                  <div
+                    key={slot.id || index}
+                    className={`${slot.id ? 'bg-blue-500/10 border-blue-500/30' : 'bg-white/5 border-white/10'} border rounded-lg p-3`}
+                  >
+                    {/* Existing slot indicator */}
+                    {slot.id && (
+                      <div className="mb-2 flex items-center gap-2">
+                        <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded">
+                          📅 Existing Slot (ID: {slot.id})
+                        </span>
+                      </div>
+                    )}
+
                     <div className="flex items-start gap-3">
                       <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-3">
                         {/* Date */}
@@ -961,7 +1064,7 @@ const ProviderDashboard = () => {
                         type="button"
                         onClick={() => handleRemoveAvailabilitySlot(index)}
                         className="mt-5 bg-red-500/20 hover:bg-red-500/30 text-red-400 p-2 rounded transition-colors"
-                        title="Remove this slot"
+                        title={slot.id ? "Delete this slot from database" : "Remove this slot"}
                       >
                         <Trash2 size={14} />
                       </button>

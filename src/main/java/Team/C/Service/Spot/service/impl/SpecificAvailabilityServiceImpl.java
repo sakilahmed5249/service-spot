@@ -12,6 +12,7 @@ import Team.C.Service.Spot.repository.UserRepository;
 import Team.C.Service.Spot.service.SpecificAvailabilityService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -157,17 +158,46 @@ public class SpecificAvailabilityServiceImpl implements SpecificAvailabilityServ
     @Override
     @Transactional(readOnly = true)
     public List<LocalDate> getAvailableDates(Long providerId, LocalDate startDate, LocalDate endDate) {
+        log.info("=== GET AVAILABLE DATES REQUEST ===");
+        log.info("Provider ID: {}", providerId);
+        log.info("Start Date: {}", startDate);
+        log.info("End Date: {}", endDate);
+        log.info("Current Date: {}", LocalDate.now());
+
         User provider = userRepository.findById(providerId)
                 .orElseThrow(() -> new IllegalArgumentException("Provider not found with ID: " + providerId));
+
+        log.info("Provider found: {} ({})", provider.getName(), provider.getEmail());
 
         List<SpecificAvailability> slots = availabilityRepository
                 .findAvailableSlotsByProviderAndDateRange(provider, startDate, endDate);
 
-        return slots.stream()
+        log.info("Total slots found from repository: {}", slots.size());
+
+        if (slots.isEmpty()) {
+            log.warn("NO AVAILABILITY SLOTS FOUND for provider {} between {} and {}", providerId, startDate, endDate);
+        } else {
+            slots.forEach(slot -> {
+                log.info("Slot found - Date: {}, Time: {}-{}, Available: {}, Bookings: {}/{}",
+                    slot.getAvailableDate(),
+                    slot.getStartTime(),
+                    slot.getEndTime(),
+                    slot.getIsAvailable(),
+                    slot.getCurrentBookings(),
+                    slot.getMaxBookings());
+            });
+        }
+
+        List<LocalDate> dates = slots.stream()
                 .map(SpecificAvailability::getAvailableDate)
                 .distinct()
                 .sorted()
                 .collect(Collectors.toList());
+
+        log.info("Distinct dates being returned: {}", dates);
+        log.info("=== END GET AVAILABLE DATES ===");
+
+        return dates;
     }
 
     @Override
@@ -189,16 +219,40 @@ public class SpecificAvailabilityServiceImpl implements SpecificAvailabilityServ
     @Override
     @Transactional(readOnly = true)
     public List<SpecificAvailabilityResponse> getTimeSlotsForDate(Long providerId, LocalDate date) {
+        log.info("=== GET TIME SLOTS FOR DATE REQUEST ===");
+        log.info("Provider ID: {}", providerId);
+        log.info("Requested Date: {}", date);
+        log.info("Current Date: {}", LocalDate.now());
+
         User provider = userRepository.findById(providerId)
                 .orElseThrow(() -> new IllegalArgumentException("Provider not found with ID: " + providerId));
+
+        log.info("Provider found: {}", provider.getName());
 
         List<SpecificAvailability> slots = availabilityRepository
                 .findByProviderAndAvailableDate(provider, date);
 
-        return slots.stream()
+        log.info("Raw slots found: {}", slots.size());
+
+        List<SpecificAvailabilityResponse> filteredSlots = slots.stream()
+                .filter(slot -> {
+                    boolean isAvailable = slot.getIsAvailable();
+                    boolean hasCapacity = slot.getMaxBookings() == null || slot.getCurrentBookings() < slot.getMaxBookings();
+                    boolean passes = isAvailable && hasCapacity;
+
+                    log.info("Slot {}: Available={}, Capacity={}/{}, Passes={}",
+                        slot.getId(), isAvailable, slot.getCurrentBookings(), slot.getMaxBookings(), passes);
+
+                    return passes;
+                })
                 .map(mapper::toResponse)
                 .sorted((a, b) -> a.getStartTime().compareTo(b.getStartTime()))
                 .collect(Collectors.toList());
+
+        log.info("Filtered slots being returned: {}", filteredSlots.size());
+        log.info("=== END GET TIME SLOTS ===");
+
+        return filteredSlots;
     }
 
     @Override
@@ -211,6 +265,8 @@ public class SpecificAvailabilityServiceImpl implements SpecificAvailabilityServ
                 .findByServiceListingAndAvailableDate(service, date);
 
         return slots.stream()
+                .filter(slot -> slot.getIsAvailable() &&
+                        (slot.getMaxBookings() == null || slot.getCurrentBookings() < slot.getMaxBookings()))
                 .map(mapper::toResponse)
                 .sorted((a, b) -> a.getStartTime().compareTo(b.getStartTime()))
                 .collect(Collectors.toList());
@@ -297,6 +353,35 @@ public class SpecificAvailabilityServiceImpl implements SpecificAvailabilityServ
     private boolean timeSlotsOverlap(java.time.LocalTime start1, java.time.LocalTime end1,
                                     java.time.LocalTime start2, java.time.LocalTime end2) {
         return start1.isBefore(end2) && start2.isBefore(end1);
+    }
+
+    /**
+     * Scheduled task to automatically clean up past availability records.
+     * Runs daily at 2 AM to remove all availability for dates before today.
+     * This prevents stale data from accumulating in the database.
+     */
+    @Scheduled(cron = "0 0 2 * * *") // Run at 2:00 AM every day
+    @Transactional
+    public void cleanupPastAvailability() {
+        LocalDate today = LocalDate.now();
+        log.info("=== SCHEDULED CLEANUP: Removing past availability records before {} ===", today);
+
+        try {
+            // Count records before deletion
+            long countBefore = availabilityRepository.count();
+
+            // Delete all past availability
+            availabilityRepository.deleteByAvailableDateLessThan(today);
+
+            // Count after deletion
+            long countAfter = availabilityRepository.count();
+            long deleted = countBefore - countAfter;
+
+            log.info("✅ Cleanup complete: Deleted {} past availability records", deleted);
+            log.info("Remaining records in database: {}", countAfter);
+        } catch (Exception e) {
+            log.error("❌ Error during scheduled cleanup: {}", e.getMessage(), e);
+        }
     }
 }
 

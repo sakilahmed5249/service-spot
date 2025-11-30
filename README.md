@@ -1,62 +1,178 @@
-# Service Spot
+# 🛠️ Service-Spot v4.0
 
-**A Localized Service Discovery and Booking Platform**
+> A Localized Service Discovery and Booking Platform connecting customers with trusted service providers.
 
-Full-stack web application connecting customers with local service providers for seamless service booking and management.
+**Latest Updates (v4.0):**
+- ✨ Enhanced booking page with colorful gradient UI
+- 📅 Improved calendar showing all available dates
+- 🎨 Glassmorphism design throughout
+- 🔧 Fixed booking validation and address collection
+- 🌈 Beautiful gradients and animations
 
 ---
 
-## 📋 Overview
+## 📖 Table of Contents
 
-Service Spot is a comprehensive platform that enables customers to discover, book, and review local services while providing service providers with tools to manage their offerings, availability, and bookings.
+- [About](#about)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [Data Storage](#data-storage)
+- [Deployment](#deployment)
+- [Troubleshooting](#troubleshooting)
+
+---
+
+## 🎯 About
+
+**Service-Spot** is a full-stack web application that enables:
+- **Customers**: Browse, search, and book local services
+- **Service Providers**: List services, manage bookings, and build their reputation
+- **Categories**: Education, Plumbing, Electrical, Cleaning, Beauty, IT Support, and more
 
 ---
 
 ## ✨ Features
 
 ### For Customers
-- Browse and search local services by category and location
-- View detailed service information with pricing and provider profiles
-- Book services with real-time availability checking
-- Manage bookings and view booking history
-- Leave reviews and ratings for completed services
-- Secure payment processing
+- 🔍 Search services by location and category
+- 📅 **NEW!** Interactive calendar with color-coded availability
+- 💳 Secure booking system with complete address collection
+- ⭐ Review and rate providers
+- 📱 Responsive mobile-friendly UI
+- 🎨 **NEW!** Beautiful gradient UI with smooth animations
 
 ### For Service Providers
-- Create and manage service listings
-- Set availability schedules and pricing
-- Manage incoming booking requests (accept/reject)
-- View and respond to customer reviews
-- Dashboard with analytics and insights
-- Profile management
+- 📝 Create and manage service listings
+- 📊 Dashboard with booking overview
+- 💼 Profile management
+- 📍 Location-based service radius
+- 🔔 Booking notifications
+- ⏰ Set availability schedules
 
-### For Administrators
-- User management (customers and providers)
-- Service category management
-- Platform oversight and moderation
-- Analytics and reporting
-- System configuration
+### System Features
+- 🔐 JWT-based authentication
+- 👥 Role-based access (Customer/Provider)
+- 🎨 **NEW!** Modern glassmorphic UI with vibrant gradients
+- 📍 Pincode-based location services
+- 🌐 RESTful API architecture
+- 📅 **NEW!** Smart calendar showing all future dates
+- 🌈 **NEW!** Color-coded booking availability
 
 ---
 
-## 🛠️ Technology Stack
+## 🚀 Tech Stack
 
 ### Backend
-- **Framework**: Spring Boot 4.0
+- **Framework**: Spring Boot 3.x
 - **Language**: Java 21
-- **Database**: MySQL 8
-- **Security**: Spring Security + JWT Authentication
+- **Database**: MySQL 8.x
 - **ORM**: Spring Data JPA (Hibernate)
+- **Security**: Spring Security (JWT)
 - **Build Tool**: Maven
 
 ### Frontend
 - **Framework**: React 18
-- **Build Tool**: Vite 5
-- **Styling**: Tailwind CSS 3
-- **State Management**: React Context API
+- **Build Tool**: Vite
+- **Styling**: Tailwind CSS
 - **HTTP Client**: Axios
-- **Routing**: React Router 6
-- **UI Components**: Custom components with Lucide icons
+- **State Management**: React Context API
+- **Routing**: React Router v6
+
+---
+
+## ⚡ Quick Start
+
+### Prerequisites
+
+- Java 21 JDK
+- Node.js 18+ and npm
+- MySQL 8.0+
+- Git
+
+### 1️⃣ Clone Repository
+
+```bash
+git clone <your-repo-url>
+cd service-spotV4
+```
+
+### 2️⃣ Setup Database
+
+1. Start MySQL Server
+2. Create database:
+   ```sql
+   CREATE DATABASE service_spot;
+   ```
+
+### 3️⃣ Configure Backend
+
+Update `src/main/resources/application.properties`:
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/service_spot
+spring.datasource.username=root
+spring.datasource.password=YOUR_PASSWORD
+```
+
+### 4️⃣ Start Backend
+
+**Option A: Using provided script**
+```bash
+./start-backend.bat
+```
+
+**Option B: Manual**
+```bash
+mvn clean install
+mvn spring-boot:run
+```
+
+Backend runs at: `http://localhost:8080`
+
+### 5️⃣ Start Frontend
+
+**Option A: Using provided script**
+```bash
+./start-frontend.bat
+```
+
+**Option B: Manual**
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Frontend runs at: `http://localhost:3000`
+
+### 6️⃣ Access Application
+
+- **Frontend**: http://localhost:3000
+- **Backend API**: http://localhost:8080/api
+- **API Docs**: http://localhost:8080/swagger-ui.html (if enabled)
+
+### 7️⃣ Login Credentials
+
+**Default Admin Account:**
+- **Email**: `admin@servicespot.com`
+- **Password**: `Admin@123` (development only - change for production!)
+- **Login URL**: `http://localhost:3000/login?type=admin`
+
+**Important Security Notes:**
+- ⚠️ Admin account is pre-created but **requires manual login**
+- ⚠️ Admin cannot register via signup page (security measure)
+- ⚠️ Use Incognito mode for testing to avoid cached sessions
+- ⚠️ Always logout after admin tasks on shared computers
+- ⚠️ JWT tokens expire after 24 hours for security
+
+**Test Accounts:**
+- Customers and service providers can be created through the signup page
+- Only customers and providers can self-register
+- Admin accounts cannot be created via signup (security measure)
+
+📖 **For more details, see:** `ADMIN_CREDENTIALS.md` and `ADMIN_AUTO_LOGIN_ANALYSIS.md`
 
 ---
 
@@ -64,185 +180,236 @@ Service Spot is a comprehensive platform that enables customers to discover, boo
 
 ```
 service-spotV4/
-├── src/                          # Backend source code
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── Team/C/Service/Spot/
-│   │   │       ├── config/       # Security, CORS configs
-│   │   │       ├── controller/   # REST API endpoints
-│   │   │       ├── dto/          # Data Transfer Objects
-│   │   │       ├── model/        # JPA entities
-│   │   │       ├── repository/   # Data access layer
-│   │   │       ├── security/     # JWT, authentication
-│   │   │       └── service/      # Business logic
-│   │   └── resources/
-│   │       ├── application.properties
-│   │       └── data.sql          # Initial data
-│   └── test/
-│
-├── frontend/
+├── frontend/                   # React frontend application
 │   ├── src/
-│   │   ├── components/           # Reusable UI components
-│   │   ├── pages/                # Page components
-│   │   ├── context/              # React contexts
-│   │   ├── services/             # API services
-│   │   └── utils/                # Utilities
-│   ├── dist/                     # Production build
-│   └── public/
+│   │   ├── components/        # Reusable UI components
+│   │   ├── pages/            # Page components (incl. enhanced BookingPage)
+│   │   ├── context/          # React Context (Auth)
+│   │   ├── services/         # API service layer
+│   │   └── utils/            # Utility functions
+│   └── package.json
 │
-└── target/                       # Compiled backend artifacts
+├── src/main/java/Team/C/Service/Spot/
+│   ├── config/               # Spring configurations
+│   ├── controller/           # REST API controllers
+│   ├── dto/                  # Data Transfer Objects
+│   │   ├── request/         # API request DTOs
+│   │   └── response/        # API response DTOs
+│   ├── mapper/              # Entity-DTO mappers
+│   ├── model/               # JPA entities
+│   ├── repository/          # Data access layer
+│   └── service/             # Business logic layer
+│
+├── src/main/resources/
+│   ├── application.properties  # App configuration
+│   └── data.sql               # Initial data (categories)
+│
+├── start-backend.bat          # Backend startup script
+├── start-frontend.bat         # Frontend startup script
+├── DEPLOYMENT_GUIDE.md        # Detailed deployment guide
+└── pom.xml                    # Maven dependencies
 ```
 
 ---
 
-## 🔐 Security Features
+## 💾 Data Storage
 
-- JWT-based authentication and authorization
-- Role-based access control (Customer, Provider, Admin)
-- Password encryption using BCrypt
-- CORS protection
-- SQL injection prevention
-- XSS protection headers
-- Secure session management
+### Understanding Data Persistence
 
----
+```
+┌──────────────────┐
+│ MySQL Workbench  │  ← GUI Tool (just for viewing)
+└────────┬─────────┘
+         │ connects to
+┌────────▼─────────┐
+│  MySQL Server    │  ← Actual database engine
+│  localhost:3306  │     (stores your data)
+└──────────────────┘
+```
 
-## 🗄️ Database Schema
+**Important**: MySQL Workbench is just a viewer. Your data is stored in the MySQL Server.
 
-### Core Entities
-- **Users**: Customer and provider accounts with roles
-- **Service Categories**: Categorization of services
-- **Service Listings**: Services offered by providers
-- **Bookings**: Service booking records with status tracking
-- **Reviews**: Customer feedback and ratings
-- **Availability**: Provider availability schedules
+### Initial Data
 
----
+When you start the backend:
 
-## 🎨 User Interface
+1. **Schema Creation**: Hibernate creates tables from `@Entity` classes
+2. **Data Initialization**: `data.sql` inserts default categories
+3. **User Data**: Accumulated through API endpoints
 
-- Modern, responsive design
-- Mobile-friendly layouts
-- Intuitive navigation
-- Real-time updates
-- Professional glassmorphic UI
-- Accessible components
-- Fast loading times
+### Production Data
+
+When deployed:
+- Use cloud MySQL (Railway, AWS RDS, PlanetScale, etc.)
+- Same data structure, different location
+- See `DEPLOYMENT_GUIDE.md` for details
 
 ---
 
-## 📊 Key Metrics
+## 🌐 Deployment
 
-- **Total Lines of Code**: 27,000+
-- **Backend Classes**: 84 Java files
-- **Frontend Components**: 50+ React components
-- **API Endpoints**: 40+ REST endpoints
-- **Database Tables**: 8 main entities
-- **User Roles**: 3 (Customer, Provider, Admin)
+### Quick Deploy with Railway (Recommended)
+
+1. Push code to GitHub
+2. Sign up at https://railway.app
+3. New Project → Deploy from GitHub
+4. Add MySQL from marketplace
+5. Deploy! (Railway auto-configures)
+
+### Other Options
+
+- **Heroku** - Backend + JawsDB MySQL
+- **AWS** - Elastic Beanstalk + RDS
+- **DigitalOcean** - App Platform + Managed Database
+- **Vercel/Netlify** - Frontend only
+
+📖 **Full deployment guide**: See `DEPLOYMENT_GUIDE.md`
 
 ---
 
-## 🚀 Performance
-
-- Optimized frontend bundle (298 KB → 98.55 KB gzipped)
-- Efficient database queries with JPA
-- Lazy loading for images and components
-- Caching strategies
-- Production-ready builds
-
----
-
-## 📝 API Documentation
+## 🔑 API Endpoints
 
 ### Authentication
-- `POST /api/auth/register` - User registration
-- `POST /api/auth/login` - User login
-- `POST /api/auth/refresh` - Token refresh
+- `POST /api/auth/register/customer` - Register customer
+- `POST /api/auth/register/provider` - Register provider
+- `POST /api/auth/login` - Login
 
 ### Services
 - `GET /api/services` - List all services
 - `GET /api/services/{id}` - Get service details
-- `POST /api/services` - Create service (Provider)
-- `PUT /api/services/{id}` - Update service (Provider)
-- `DELETE /api/services/{id}` - Delete service (Provider)
+- `POST /api/services` - Create service (provider)
+- `PUT /api/services/{id}` - Update service (provider)
+- `GET /api/services/search` - Search services
+
+### Categories
+- `GET /api/categories` - List all categories
+- `GET /api/categories/{id}` - Get category details
 
 ### Bookings
-- `GET /api/bookings` - List user bookings
-- `POST /api/bookings` - Create booking
-- `PUT /api/bookings/{id}` - Update booking status
-- `GET /api/bookings/{id}` - Get booking details
+- `POST /api/bookings` - Create booking (customer)
+- `GET /api/bookings/user/{userId}` - Get user bookings
+- `PATCH /api/bookings/{id}/status` - Update booking status
 
-### Users
-- `GET /api/users/profile` - Get user profile
-- `PUT /api/users/profile` - Update profile
-- `GET /api/users/providers` - List providers
+### Providers
+- `GET /api/providers` - List providers
+- `GET /api/providers/{id}` - Get provider details
+- `PUT /api/providers/{id}` - Update provider profile
 
-### Admin
-- `GET /api/admin/users` - Manage users
-- `GET /api/admin/categories` - Manage categories
-- `GET /api/admin/statistics` - View analytics
+---
+
+## 🐛 Troubleshooting
+
+### Backend Won't Start
+
+**Issue**: `Field 'created_at' doesn't have a default value`  
+**Solution**: Fixed in latest `data.sql`. Run:
+```bash
+git pull
+mvn clean install
+```
+
+**Issue**: `Cannot connect to database`  
+**Solution**: 
+1. Check MySQL is running
+2. Verify credentials in `application.properties`
+3. Ensure database `service_spot` exists
+
+### Frontend Issues
+
+**Issue**: `Network Error` when calling API  
+**Solution**: 
+1. Ensure backend is running on port 8080
+2. Check CORS configuration
+3. Verify API base URL in frontend
+
+**Issue**: Categories dropdown empty  
+**Solution**: 
+1. Check backend logs for SQL errors
+2. Manually run `data.sql` in MySQL Workbench
+3. Verify `/api/categories` endpoint returns data
+
+### Validation Errors
+
+**Issue**: `Description must be between 20 and 2000 characters`  
+**Solution**: Fixed! Now accepts 1+ characters
+
+**Issue**: `Category not found with ID: X`  
+**Solution**: Categories now support dynamic creation
+
+---
+
+## 📚 Documentation
+
+- `BOOKING_PAGE_IMPROVEMENTS.md` - **NEW!** Booking page enhancements guide
+- `BOOKING_VALIDATION_FIX.md` - **NEW!** Booking validation fix details
+- `BACKEND_ARCHITECTURE.md` - Backend structure guide
+- `SERVICE_LAYER_GUIDE.md` - Service layer patterns
+- `DEPLOYMENT_GUIDE.md` - Complete deployment instructions
+- `QUICK_START_GUIDE.md` - Getting started guide
+- `ROADMAP.md` - Future features
 
 ---
 
 ## 🧪 Testing
 
-- Unit tests for service layer
-- Integration tests for API endpoints
-- Component tests for React components
-- End-to-end testing support
+### Run Backend Tests
+```bash
+mvn test
+```
+
+### Run Frontend Tests
+```bash
+cd frontend
+npm test
+```
 
 ---
 
-## 📦 Build Artifacts
+## 🤝 Contributing
 
-### Backend
-- **JAR File**: `target/Service-Spot-0.0.1-SNAPSHOT.jar` (60.66 MB)
-- Includes all dependencies
-- Ready for deployment
-
-### Frontend
-- **Production Build**: `frontend/dist/`
-- Optimized and minified
-- Static files ready for CDN
-
----
-
-## 🌟 Highlights
-
-- Complete full-stack implementation
-- Production-ready code
-- Secure authentication system
-- Real-time availability management
-- Comprehensive booking workflow
-- Review and rating system
-- Admin dashboard
-- Mobile responsive
-- Clean architecture
-- Best practices followed
+1. Fork the repository
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
 ---
 
 ## 📄 License
 
-This project is developed as part of an academic/portfolio project.
+This project is licensed under the MIT License.
 
 ---
 
 ## 👥 Team
 
-Developed by Team C
+**Team C** - Software Engineering Project  
+Version 4.0 - November 2025
+
+---
+
+## 🎉 Acknowledgments
+
+- Spring Boot Documentation
+- React Documentation
+- Tailwind CSS
+- MySQL Community
 
 ---
 
 ## 📞 Support
 
-For deployment instructions, see separate documentation files:
-- `DEPLOY_NOW.md` - Quick deployment guide
-- `DEPLOYMENT_GUIDE_FREE.md` - Detailed deployment instructions
+If you encounter issues:
+
+1. Check `TROUBLESHOOTING.md`
+2. Review backend logs
+3. Check browser console for frontend errors
+4. Verify database connection
+5. Ensure all dependencies are installed
 
 ---
 
-**Version**: 4.0  
-**Status**: Production Ready  
-**Last Updated**: November 30, 2025
+**Built with ❤️ by Team C**
+
+🚀 Happy Coding!
 

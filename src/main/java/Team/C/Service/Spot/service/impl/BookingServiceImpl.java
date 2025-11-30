@@ -40,6 +40,7 @@ public class BookingServiceImpl implements BookingService {
     private final UserRepository userRepository;
     private final ServiceListingRepository serviceListingRepository;
     private final BookingMapper bookingMapper;
+    private final Team.C.Service.Spot.repository.SpecificAvailabilityRepository availabilityRepository;
 
     @Override
     public BookingResponse createBooking(CreateBookingRequest request) {
@@ -205,6 +206,10 @@ public class BookingServiceImpl implements BookingService {
                 break;
             case COMPLETED:
                 booking.setCompletedAt(now);
+
+                // Auto-cleanup: Delete the specific availability slot for this booking
+                log.info("🗑️ Auto-cleanup: Booking completed, removing availability slot for date: {}", booking.getBookingDate());
+                cleanupAvailabilityForCompletedBooking(booking);
                 break;
             case CANCELLED:
                 booking.setCancelledAt(now);
@@ -252,6 +257,37 @@ public class BookingServiceImpl implements BookingService {
         String year = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy"));
         long count = bookingRepository.count() + 1;
         return String.format("BK-%s-%06d", year, count);
+    }
+
+    /**
+     * Clean up availability slot when booking is completed
+     * This prevents the same slot from appearing as available after service is done
+     */
+    private void cleanupAvailabilityForCompletedBooking(Booking booking) {
+        try {
+            // Find and delete the specific availability for this booking's date and provider
+            var availabilities = availabilityRepository.findAll().stream()
+                    .filter(a -> a.getProvider().getId().equals(booking.getProvider().getId()))
+                    .filter(a -> a.getAvailableDate().equals(booking.getBookingDate()))
+                    .filter(a -> {
+                        // Match the time slot
+                        var bookingTime = booking.getBookingTime();
+                        return a.getStartTime().equals(bookingTime) ||
+                               (bookingTime.isAfter(a.getStartTime()) && bookingTime.isBefore(a.getEndTime()));
+                    })
+                    .toList();
+
+            if (!availabilities.isEmpty()) {
+                availabilityRepository.deleteAll(availabilities);
+                log.info("✅ Deleted {} availability slot(s) for completed booking on {}",
+                        availabilities.size(), booking.getBookingDate());
+            } else {
+                log.info("ℹ️ No availability slots found to clean up for date: {}", booking.getBookingDate());
+            }
+        } catch (Exception e) {
+            log.error("❌ Error cleaning up availability for completed booking: {}", e.getMessage());
+            // Don't fail the booking update if cleanup fails
+        }
     }
 }
 
