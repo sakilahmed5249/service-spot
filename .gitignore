@@ -1,33 +1,60 @@
-HELP.md
+# Compiled class files
+node_modules/
+# Node modules (if any)
+
+Thumbs.db
+ehthumbs.db
+.Trashes
+.Spotlight-V100
+._*
+.DS_Store?
+.DS_Store
+# OS generated files
+
+.env.development.local
+.env.production.local
+.env.local
+.env
+# Environment variables
+
+application-dev.properties
+application-local.properties
+# Application properties (sensitive data)
+
+*.log
+# Log files
+
+.mvn/timing.properties
+buildNumber.properties
+dependency-reduced-pom.xml
+release.properties
+pom.xml.next
+pom.xml.versionsBackup
+pom.xml.releaseBackup
+pom.xml.tag
 target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+# Maven
 
-### STS ###
-.apt_generated
-.classpath
-.factorypath
-.project
-.settings
-.springBeans
-.sts4-cache
+.vscode/
+# VS Code
 
-### IntelliJ IDEA ###
-.idea
+*.ipr
 *.iws
 *.iml
-*.ipr
+.idea/
+# IntelliJ IDEA
 
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
+.settings/
+.project
+.classpath
+# Eclipse
 
-### VS Code ###
-.vscode/
+*.rar
+*.tar.gz
+*.zip
+*.ear
+*.war
+*.jar
+target/
+*.class
+

@@ -1,5 +1,6 @@
 package Team.C.Service.Spot.service.impl;
 
+import Team.C.Service.Spot.dto.request.AdminRegistrationRequest;
 import Team.C.Service.Spot.dto.request.CustomerRegistrationRequest;
 import Team.C.Service.Spot.dto.request.LoginRequest;
 import Team.C.Service.Spot.dto.request.ProviderRegistrationRequest;
@@ -37,6 +38,50 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+
+    /**
+     * Register a new admin.
+     * Validates email uniqueness, encodes password, and persists the admin user.
+     */
+    @Override
+    public UserResponse registerAdmin(AdminRegistrationRequest request) {
+        log.info("Registering new admin with email: {}", request.getEmail());
+
+        // Validate email uniqueness
+        if (emailExists(request.getEmail())) {
+            log.error("Email already exists: {}", request.getEmail());
+            throw new IllegalArgumentException("Email already exists: " + request.getEmail());
+        }
+
+        // Validate phone uniqueness
+        if (phoneExists(request.getPhone())) {
+            log.error("Phone number already exists: {}", request.getPhone());
+            throw new IllegalArgumentException("Phone number already exists: " + request.getPhone());
+        }
+
+        // Build Admin User entity
+        User admin = User.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .phone(request.getPhone())
+                .doorNo(request.getDoorNo())
+                .addressLine(request.getAddressLine())
+                .city(request.getCity())
+                .state(request.getState())
+                .pincode(request.getPincode())
+                .role(Role.ADMIN)
+                .active(true)
+                .verified(true) // Admins are verified by default
+                .build();
+
+        // Save to database
+        User savedAdmin = userRepository.save(admin);
+        log.info("Successfully registered admin with ID: {}", savedAdmin.getId());
+
+        // Convert to Response DTO
+        return userMapper.toResponse(savedAdmin);
+    }
 
     /**
      * Register a new customer.
@@ -223,9 +268,11 @@ public class UserServiceImpl implements UserService {
 
     /**
      * Delete user account.
-     * Soft delete by setting active = false, or hard delete based on business requirements.
+     * Performs HARD DELETE - permanently removes user from database.
+     * This is used by admin to completely remove users from the system.
      */
     @Override
+    @Transactional
     public void deleteUser(Long id) {
         log.info("Deleting user with ID: {}", id);
 
@@ -235,14 +282,10 @@ public class UserServiceImpl implements UserService {
                     return new IllegalArgumentException("User not found with ID: " + id);
                 });
 
-        // Soft delete - set active to false
-        user.setActive(false);
-        userRepository.save(user);
+        // Hard delete - permanently remove from database
+        userRepository.deleteById(id);
 
-        // For hard delete, uncomment:
-        // userRepository.deleteById(id);
-
-        log.info("Successfully deleted user with ID: {}", id);
+        log.info("Successfully permanently deleted user: {} (ID: {})", user.getName(), id);
     }
 
     /**

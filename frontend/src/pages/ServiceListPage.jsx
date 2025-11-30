@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Search, MapPin, Star, Filter } from 'lucide-react';
-import { FaPhone, FaEnvelope, FaMapMarkerAlt } from 'react-icons/fa';
+import { Search, Filter } from 'lucide-react';
+import { FaMapMarkerAlt } from 'react-icons/fa';
 import { MdVerified } from 'react-icons/md';
 import { serviceAPI } from '../services/api';
 import { SERVICE_CATEGORIES, CITIES, formatCurrency } from '../utils/constants';
@@ -93,32 +93,33 @@ export default function ServiceListPage() {
   }, [loading, services.length]);
 
   return (
-    <div className="container mx-auto px-4 py-12">
-      {/* Header */}
-      <div className="mb-8 text-center">
-        <h1 className="text-4xl md:text-5xl font-extrabold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Browse Services</h1>
-        <p className="text-slate-500 max-w-2xl mx-auto">Discover verified local professionals, compare prices, and book instantly.</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50">
+      <div className="container mx-auto px-4 py-12">
+        {/* Header */}
+        <div className="mb-8 text-center">
+          <h1 className="text-4xl md:text-5xl font-extrabold mb-2 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">Browse Services</h1>
+          <p className="text-gray-600 max-w-2xl mx-auto">Discover verified local professionals, compare prices, and book instantly.</p>
+        </div>
 
       <div className="grid md:grid-cols-12 gap-6">
         {/* Filters - left */}
         <aside className="md:col-span-4 lg:col-span-3">
-          <div className="card-glass p-5 rounded-2xl sticky top-6">
+          <div className="bg-white shadow-lg border border-gray-200 p-5 rounded-2xl sticky top-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="feature-icon !w-10 !h-10">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary to-purple-600 rounded-xl flex items-center justify-center text-white shadow-md">
                 <Filter size={18} />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Refine search</h2>
-                <p className="text-xs text-slate-400">Filter by city, category or keyword</p>
+                <h2 className="text-lg font-semibold text-gray-900">Refine search</h2>
+                <p className="text-xs text-gray-500">Filter by city, category or keyword</p>
               </div>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label htmlFor="search" className="block text-sm font-medium text-slate-400 mb-2">Search</label>
+                <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-2">Search</label>
                 <div className="relative">
-                  <Search size={18} className="absolute left-3 top-3 text-slate-400" />
+                  <Search size={18} className="absolute left-3 top-3 text-gray-400" />
                   <input
                     id="search"
                     type="search"
@@ -132,7 +133,7 @@ export default function ServiceListPage() {
               </div>
 
               <div>
-                <label htmlFor="city" className="block text-sm font-medium text-slate-400 mb-2">City</label>
+                <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">City</label>
                 <select
                   id="city"
                   value={filters.city}
@@ -145,7 +146,7 @@ export default function ServiceListPage() {
               </div>
 
               <div>
-                <label htmlFor="category" className="block text-sm font-medium text-slate-400 mb-2">Category</label>
+                <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">Category</label>
                 <select
                   id="category"
                   value={filters.category}
@@ -163,13 +164,13 @@ export default function ServiceListPage() {
               </div>
 
               <div className="mt-4">
-                <div className="text-xs text-slate-400 mb-2">Quick tags</div>
+                <div className="text-xs text-gray-600 font-medium mb-2">Quick tags</div>
                 <div className="flex flex-wrap gap-2">
                   {['Same-day', 'Top-rated', 'Verified', 'Budget'].map(tag => (
                     <button
                       key={tag}
                       onClick={() => handleFilterChange('search', tag)}
-                      className="label-soft hover:scale-105 transition-transform"
+                      className="px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-medium hover:bg-primary/20 transition-colors"
                     >
                       {tag}
                     </button>
@@ -181,10 +182,10 @@ export default function ServiceListPage() {
 
           {/* Mobile CTA */}
           <div className="md:hidden mt-4">
-            <div className="card-glass p-4 rounded-2xl flex gap-3 items-center">
+            <div className="bg-white shadow-lg border border-gray-200 p-4 rounded-2xl flex gap-3 items-center">
               <div className="flex-1">
-                <div className="text-sm text-slate-400">Need help finding a pro?</div>
-                <div className="font-medium text-white">Chat with us</div>
+                <div className="text-sm text-gray-600">Need help finding a pro?</div>
+                <div className="font-medium text-gray-900">Chat with us</div>
               </div>
               <button className="btn-primary">Chat</button>
             </div>
@@ -195,8 +196,8 @@ export default function ServiceListPage() {
         <main className="md:col-span-8 lg:col-span-9">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <p className="text-sm text-slate-400">Results</p>
-              <div aria-live="polite" className="text-lg font-semibold text-slate-800 dark:text-slate-200">
+              <p className="text-sm text-gray-600">Results</p>
+              <div aria-live="polite" className="text-lg font-semibold text-gray-900">
                 {loading ? (
                   <span className="inline-flex items-center gap-2">
                     <span className="inline-block w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin" />
@@ -205,7 +206,7 @@ export default function ServiceListPage() {
                 ) : (
                   <span>
                     <span className="text-2xl font-black bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mr-2">{services.length}</span>
-                    services
+                    <span className="text-primary font-semibold">services</span>
                   </span>
                 )}
               </div>
@@ -221,17 +222,17 @@ export default function ServiceListPage() {
           {loading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="card-glass p-4 rounded-2xl animate-pulse h-44" />
+                <div key={i} className="bg-white shadow-lg border border-gray-200 p-4 rounded-2xl animate-pulse h-44" />
               ))}
             </div>
           ) : services.length === 0 ? (
-            <div className="rounded-2xl bg-slate-100 p-8 text-center dark:bg-slate-800/50">
+            <div className="rounded-2xl bg-white shadow-lg border border-gray-200 p-8 text-center">
               <div className="text-4xl mb-4">😕</div>
-              <h3 className="text-xl font-bold mb-2 dark:text-white">No services match your filters</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">Try removing filters or change city/category</p>
+              <h3 className="text-xl font-bold mb-2 text-gray-900">No services match your filters</h3>
+              <p className="text-sm text-gray-600 mb-4">Try removing filters or change city/category</p>
               <div className="flex justify-center gap-3">
                 <button onClick={clearFilters} className="btn-primary">Reset filters</button>
-                <Link to="/" className="btn-ghost dark:text-slate-200">Back home</Link>
+                <Link to="/" className="btn-secondary">Back home</Link>
               </div>
             </div>
           ) : (
@@ -241,7 +242,7 @@ export default function ServiceListPage() {
                 return (
                   <article
                     key={service.id}
-                    className="card-glass p-4 rounded-2xl flex flex-col justify-between hover:translate-y-[-4px] hover:shadow-2xl transition-transform duration-200"
+                    className="bg-white shadow-lg border border-gray-200 p-6 rounded-2xl flex flex-col justify-between hover:-translate-y-1 hover:shadow-xl transition-all duration-300"
                     style={{ animationDelay: `${index * 40}ms` }}
                   >
                     <div>
@@ -251,11 +252,11 @@ export default function ServiceListPage() {
                         </div>
 
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-lg font-semibold text-[var(--text-primary)] truncate">{service.title}</h3>
-                          <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
-                            <span className="label-soft">{service.category?.name || service.categoryName || 'Service'}</span>
+                          <h3 className="text-lg font-semibold text-gray-900 truncate">{service.title}</h3>
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
+                            <span className="px-2 py-1 bg-primary/10 text-primary rounded-lg text-xs font-medium">{service.category?.name || service.categoryName || 'Service'}</span>
                           </div>
-                          <div className="flex items-center gap-2 text-sm text-slate-400 mt-1">
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mt-1">
                             <FaMapMarkerAlt /> <span className="truncate">{service.city}, {service.state}</span>
                           </div>
                         </div>
@@ -264,15 +265,15 @@ export default function ServiceListPage() {
                           <div className="text-lg font-bold text-primary">
                             {formatCurrency(service.price || 0)}
                           </div>
-                          <div className="text-xs text-slate-400">{service.durationMinutes}min</div>
+                          <div className="text-xs text-gray-500">{service.durationMinutes}min</div>
                         </div>
                       </div>
 
-                      <div className="mt-4 bg-white/5 rounded-xl p-3">
-                        <p className="text-sm text-slate-300 mb-2 line-clamp-2">{service.description || 'Professional service'}</p>
+                      <div className="mt-4 bg-gray-50 border border-gray-100 rounded-xl p-3">
+                        <p className="text-sm text-gray-700 mb-2 line-clamp-2">{service.description || 'Professional service'}</p>
                         {service.provider && (
-                          <div className="flex items-center gap-2 text-sm text-slate-400 mt-2">
-                            <span className="font-medium text-slate-300">By {service.provider.name}</span>
+                          <div className="flex items-center gap-2 text-sm text-gray-600 mt-2">
+                            <span className="font-medium text-gray-900">By {service.provider.name}</span>
                             {service.provider.verified && <MdVerified className="text-blue-500" />}
                           </div>
                         )}
@@ -288,9 +289,13 @@ export default function ServiceListPage() {
                         View Details
                       </Link>
 
-                      {/* Show Book Now only for customers and guests, not for providers */}
+                      {/* Show Book Now for guests (redirects to login) and customers */}
                       {(!user || user.role?.toUpperCase() === 'CUSTOMER') && (
-                        <Link to={`/bookings/new?service=${service.id}`} className="btn-primary inline-flex items-center gap-2">
+                        <Link
+                          to={user ? `/bookings/new?service=${service.id}` : `/login?type=customer&redirect=/bookings/new?service=${service.id}`}
+                          className="btn-primary inline-flex items-center gap-2"
+                          aria-label={`Book ${service.title}`}
+                        >
                           Book Now
                         </Link>
                       )}
@@ -300,6 +305,7 @@ export default function ServiceListPage() {
                         <a
                           href={`mailto:${service.provider.email || 'contact@example.com'}`}
                           className="btn-secondary inline-flex items-center gap-2"
+                          aria-label={`Contact ${service.provider.name}`}
                         >
                           Contact
                         </a>
@@ -311,6 +317,7 @@ export default function ServiceListPage() {
             </div>
           )}
         </main>
+      </div>
       </div>
     </div>
   );

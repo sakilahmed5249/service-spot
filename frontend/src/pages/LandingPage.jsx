@@ -4,9 +4,7 @@ import { Search, MapPin, ArrowRight, TrendingUp } from 'lucide-react';
 import { SERVICE_CATEGORIES, CITIES } from '../utils/constants';
 import { getCategoryIcon } from '../utils/categoryIcons';
 import ImageSlider from '../components/ImageSlider';
-import axios from 'axios';
-
-const API_BASE_URL = 'http://localhost:8080/api';
+import { providerAPI } from '../services/api';
 
 /* Why: Single-file landing page improved with glassy hero, CTA, and accessible search */
 export default function LandingPage() {
@@ -19,18 +17,32 @@ export default function LandingPage() {
   const [availableServices, setAvailableServices] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Handle hash navigation to scroll to Popular Businesses section
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === '#popular-businesses') {
+      // Small timeout to ensure DOM is ready
+      setTimeout(() => {
+        const element = document.getElementById('popular-businesses');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }, 100);
+    }
+  }, []);
+
   // Fetch available cities and services on component mount
   useEffect(() => {
     const fetchAvailableData = async () => {
       try {
         setLoading(true);
 
-        // Fetch available cities from providers
-        const citiesResponse = await axios.get(`${API_BASE_URL}/users/providers/locations/cities`);
+        // Fetch available cities from providers using centralized API
+        const citiesResponse = await providerAPI.getAvailableCities();
         const cities = citiesResponse.data.data || [];
 
-        // Fetch available service types from providers
-        const servicesResponse = await axios.get(`${API_BASE_URL}/users/providers/service-types`);
+        // Fetch available service types from providers using centralized API
+        const servicesResponse = await providerAPI.getAvailableServiceTypes();
         const services = servicesResponse.data.data || [];
 
         // Show ONLY database data - truly dynamic
@@ -54,28 +66,46 @@ export default function LandingPage() {
 
   const heroImages = [
     {
-      url: 'https://images.unsplash.com/photo-1585704032915-c3400ca199e7?w=1800&auto=format&fit=crop',
+      url: 'https://www.nuflowmidwest.com/wp-content/uploads/2023/09/The-8-Advantages-of-Hiring-a-Professional-Plumbing-Service-for-Your-Property-Management-Needs-1-1080x675.png',
       alt: 'Professional Plumbing Services',
       title: 'Expert Plumbing',
       subtitle: 'Fast & Reliable Solutions'
     },
     {
-      url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=1800&auto=format&fit=crop',
+      url: 'https://www.cannyelectrics.com.au/wp-content/uploads/2023/08/electrician-working-power-box.jpg',
       alt: 'Electrical Services',
       title: 'Certified Electricians',
       subtitle: 'Safe & Professional'
     },
     {
-      url: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=1800&auto=format&fit=crop',
+      url: 'https://www.pritchardindustries.com/wp-content/uploads/2023/01/janitorial.jpg',
       alt: 'Cleaning Services',
       title: 'Premium Cleaning',
       subtitle: 'Spotless Results'
     },
     {
-      url: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?w=1800&auto=format&fit=crop',
+      url: 'https://www.jaipurhomeservice.com/upload/carpenter-online-services-in-jaipur.jpg',
       alt: 'Carpentry Services',
       title: 'Skilled Carpenters',
       subtitle: 'Quality Craftsmanship'
+    },
+    {
+      url: 'https://emergenttutoring.com/wp-content/uploads/2021/06/benefits-of-tutoring-in-college-1024x563.jpg',
+      alt: 'Professional Tutoring Services',
+      title: 'Expert Tutors',
+      subtitle: 'Personalized Learning'
+    },
+    {
+      url: 'https://www.ugaoo.com/cdn/shop/articles/d411a14006_3d31861e-e3d2-4d17-94b2-0de6fbf7681a.jpg?v=1698835017&width=1500',
+      alt: 'Professional Gardening Services',
+      title: 'Garden Experts',
+      subtitle: 'Beautiful Landscapes'
+    },
+    {
+      url: 'https://jasleenbeautysalon.com/wp-content/uploads/2024/12/pexels-cottonbro-3992863-1024x682.jpg.webp',
+      alt: 'Professional Hair Styling Services',
+      title: 'Expert Stylists',
+      subtitle: 'Look Your Best'
     }
   ];
 
@@ -123,18 +153,18 @@ export default function LandingPage() {
             {/* Enhanced Search Form */}
             <form onSubmit={handleSearch} className="bg-white/95 backdrop-blur-sm p-6 flex flex-col md:flex-row gap-4 rounded-2xl shadow-2xl border border-white/50">
               <div className="flex-1 relative group">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-purple-600 transition-colors" size={20} />
+                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={20} />
                 <select
                   value={searchCity}
                   onChange={(e) => setSearchCity(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl text-gray-700 focus:outline-none focus:ring-4 focus:ring-purple-500/20 focus:border-purple-500 bg-white transition-all duration-300 appearance-none cursor-pointer font-medium"
+                  className="w-full pl-12 pr-4 py-4 border-2 border-purple-500/30 rounded-xl text-white focus:outline-none focus:ring-4 focus:ring-orange-500/50 focus:border-orange-500 bg-slate-700/50 backdrop-blur-sm transition-all duration-300 appearance-none cursor-pointer font-medium hover:border-purple-500/50"
                   disabled={loading}
                 >
-                  <option value="">
+                  <option value="" className="bg-slate-800">
                     {loading ? '⏳ Loading cities...' : availableCities.length > 0 ? '📍 Select City' : '📍 No cities available - Register as provider first'}
                   </option>
                   {availableCities.map((city) => (
-                    <option key={city} value={city}>{city}</option>
+                    <option key={city} value={city} className="bg-slate-800">{city}</option>
                   ))}
                 </select>
               </div>
@@ -165,12 +195,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Categories Section - Clean Grid */}
-      <section className="py-16 bg-white">
+      {/* Categories Section - Gaming Dark Theme */}
+      <section id="popular-businesses" className="py-16 bg-gradient-to-b from-slate-900 to-slate-800">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 font-display mb-2">
-              Popular Businesses            </h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-white font-display mb-2 drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+              Popular <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-500">Businesses</span>
+            </h2>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
@@ -180,12 +211,12 @@ export default function LandingPage() {
                 <Link
                   key={category}
                   to={`/services?category=${category}`}
-                  className="bg-white rounded-2xl p-6 hover:shadow-xl transition-shadow duration-300 border border-gray-100 text-center group"
+                  className="bg-slate-800/80 backdrop-blur-lg rounded-2xl p-6 shadow-xl border-2 border-purple-500/30 hover:border-orange-500 hover:shadow-[0_0_30px_rgba(255,107,53,0.5)] transition-all duration-300 text-center group hover:-translate-y-2"
                 >
-                  <div className={`${bg} w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-3`}>
-                    <Icon className="text-3xl" style={{ color: color.includes('from-') ? undefined : color }} />
+                  <div className="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-3 bg-gradient-to-br from-orange-500 to-pink-500 shadow-[0_0_20px_rgba(255,107,53,0.5)] group-hover:scale-110 transition-transform">
+                    <Icon className="text-3xl text-white" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 group-hover:text-primary transition-colors">
+                  <h3 className="font-semibold text-white group-hover:text-orange-400 transition-colors drop-shadow-lg">
                     {category}
                   </h3>
                 </Link>
@@ -195,28 +226,28 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA Section - Simple and Clean */}
-      <section className="py-16 bg-gradient-to-br from-primary-50 to-secondary-50">
+      {/* CTA Section - Gaming Dark Theme with more padding */}
+      <section className="py-24 bg-gradient-to-br from-slate-900 via-purple-900/30 to-slate-900">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-gray-900 font-display">
-              Are You a Service Provider?
+            <h2 className="text-3xl md:text-4xl font-bold mb-4 text-white font-display drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+              Are You a <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-pink-500">Service Provider</span>?
             </h2>
-            <p className="text-lg text-gray-600 mb-8">
+            <p className="text-lg text-white mb-8 drop-shadow-lg">
               Join our platform and grow your business
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 to="/signup?type=provider"
-                className="bg-primary text-white px-8 py-3 rounded-full font-semibold hover:bg-primary-600 transition-colors inline-flex items-center justify-center gap-2"
+                className="bg-gradient-to-r from-orange-500 to-pink-500 text-white px-8 py-3 rounded-full font-semibold hover:from-orange-600 hover:to-pink-600 transition-all transform hover:scale-105 hover:shadow-lg hover:shadow-orange-500/50 inline-flex items-center justify-center gap-2"
               >
                 Register as Provider
                 <ArrowRight size={20} />
               </Link>
               <Link
                 to="/services"
-                className="bg-white text-primary border-2 border-primary px-8 py-3 rounded-full font-semibold hover:bg-primary-50 transition-colors inline-flex items-center justify-center gap-2"
+                className="bg-white/10 backdrop-blur-sm text-white border-2 border-white/30 px-8 py-3 rounded-full font-semibold hover:bg-white/20 hover:border-white/50 transition-all inline-flex items-center justify-center gap-2"
               >
                 Browse Services
               </Link>

@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState, useRef } from 'react';
-import { customerAPI, providerAPI } from '../services/api';
+import { adminAPI, customerAPI, providerAPI } from '../services/api';
 
 /*
   AuthContext:
@@ -184,7 +184,10 @@ export const AuthProvider = ({ children }) => {
 
       let response = null;
 
-      if (userType === 'customer') {
+      if (userType === 'admin') {
+        if (!adminAPI?.login) throw new Error('adminAPI.login not implemented');
+        response = await adminAPI.login(credentials);
+      } else if (userType === 'customer') {
         if (!customerAPI?.login) throw new Error('customerAPI.login not implemented');
         response = await customerAPI.login(credentials);
       } else {
@@ -349,8 +352,9 @@ export const AuthProvider = ({ children }) => {
     updateUser,
     // convenience flags
     isAuthenticated: Boolean(user),
-    isCustomer: user?.role === 'customer',
-    isProvider: user?.role === 'provider',
+    isAdmin: user?.role === 'ADMIN' || user?.role === 'admin',
+    isCustomer: user?.role === 'CUSTOMER' || user?.role === 'customer',
+    isProvider: user?.role === 'PROVIDER' || user?.role === 'provider',
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

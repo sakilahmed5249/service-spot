@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { providerAPI } from '../services/api';
-import { User, Mail, Phone, MapPin, Edit, Save, X, Check, Briefcase, DollarSign, Award } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Edit, Save, X, Check, Briefcase, DollarSign, Award, Trash2 } from 'lucide-react';
 import { isValidPhone, isValidPincode } from '../utils/constants';
 
 /* Minimal toast */
@@ -22,10 +23,12 @@ const Toast = ({ message, tone = 'success', onClose }) => (
 );
 
 export default function ProviderProfile() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser, logout } = useAuth();
+  const navigate = useNavigate();
 
   // form state
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -174,9 +177,38 @@ export default function ProviderProfile() {
     setIsEditing(false);
   }
 
+  async function handleDeleteProfile() {
+    try {
+      setLoading(true);
+
+      // Call delete endpoint
+      await axios.delete(`http://localhost:8080/api/users/${user.id}/delete-profile`);
+
+      // Show success message
+      setToast({ message: 'Profile deleted successfully', tone: 'success' });
+
+      // Wait a moment to show the message
+      setTimeout(() => {
+        // Logout and redirect
+        logout();
+        navigate('/');
+      }, 2000);
+
+    } catch (err) {
+      console.error('Error deleting profile:', err);
+      setToast({
+        message: err.response?.data?.message || 'Failed to delete profile. Please try again.',
+        tone: 'error'
+      });
+      setShowDeleteModal(false);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center text-slate-400">
           <div className="mb-2 text-lg">No user data</div>
           <div className="text-sm">Please log in.</div>
@@ -186,7 +218,7 @@ export default function ProviderProfile() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] py-8 px-4 bg-[var(--bg)]">
+    <div className="min-h-[calc(100vh-4rem)] py-8 px-4 bg-gray-50">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -194,7 +226,7 @@ export default function ProviderProfile() {
           <p className="text-slate-400">Manage your professional information and service details</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="card-glass p-8 rounded-2xl">
+        <form onSubmit={handleSubmit} className="bg-white shadow-lg border border-gray-200 p-8 rounded-2xl">
           {/* Header with Edit/Save buttons */}
           <div className="flex items-center justify-between mb-6 pb-6 border-b border-white/10">
             <h2 className="text-xl font-semibold text-white">Profile Information</h2>
@@ -497,8 +529,74 @@ export default function ProviderProfile() {
               </div>
             </div>
           </div>
+
+          {/* Delete Profile Section */}
+          <div className="mt-8 pt-6 border-t border-red-500/30">
+            <h3 className="text-lg font-semibold text-red-400 mb-2 flex items-center gap-2">
+              <Trash2 size={20} />
+              Danger Zone
+            </h3>
+            <p className="text-sm text-slate-400 mb-4">
+              Once you delete your profile, there is no going back. This will permanently delete your account,
+              all your services, bookings, reviews, and availability settings.
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowDeleteModal(true)}
+              className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-lg flex items-center gap-2 transition-colors font-medium"
+            >
+              <Trash2 size={18} />
+              Delete My Profile Permanently
+            </button>
+          </div>
         </form>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-[#1a1a2e] rounded-2xl max-w-md w-full p-6 shadow-2xl border border-red-500/30">
+            <div className="text-center mb-6">
+              <div className="mx-auto w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
+                <Trash2 className="text-red-400" size={32} />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Delete Your Profile?</h2>
+              <p className="text-slate-400">
+                This action cannot be undone. This will permanently delete your provider account and remove all your data.
+              </p>
+            </div>
+
+            <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+              <h3 className="font-semibold text-red-300 mb-2">This will permanently delete:</h3>
+              <ul className="text-sm text-red-200 space-y-1">
+                <li>• Your provider profile and account</li>
+                <li>• All your services and listings</li>
+                <li>• All your bookings (past and upcoming)</li>
+                <li>• All reviews you've received</li>
+                <li>• Your availability settings</li>
+                <li>• Your earnings history</li>
+              </ul>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={loading}
+                className="flex-1 px-4 py-3 border border-white/20 rounded-lg hover:bg-white/10 transition-colors text-white font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProfile}
+                disabled={loading}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg transition-colors disabled:opacity-50 font-medium"
+              >
+                {loading ? 'Deleting...' : 'Yes, Delete Forever'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toast && <Toast message={toast.message} tone={toast.tone} onClose={() => setToast(null)} />}

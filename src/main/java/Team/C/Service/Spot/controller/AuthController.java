@@ -1,5 +1,6 @@
 package Team.C.Service.Spot.controller;
 
+import Team.C.Service.Spot.dto.request.AdminRegistrationRequest;
 import Team.C.Service.Spot.dto.request.CustomerRegistrationRequest;
 import Team.C.Service.Spot.dto.request.LoginRequest;
 import Team.C.Service.Spot.dto.request.ProviderRegistrationRequest;
@@ -7,6 +8,7 @@ import Team.C.Service.Spot.dto.response.ApiResponse;
 import Team.C.Service.Spot.dto.response.AuthResponse;
 import Team.C.Service.Spot.dto.response.UserResponse;
 import Team.C.Service.Spot.model.User;
+import Team.C.Service.Spot.security.JwtTokenProvider;
 import Team.C.Service.Spot.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -16,10 +18,10 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * REST Controller for Authentication operations.
- * Handles user registration (customer and provider) and login.
+ * Handles user registration (admin, customer and provider) and login.
  *
  * @author Team C
- * @version 3.0
+ * @version 4.0
  * @since 2025-11-29
  */
 @RestController
@@ -29,6 +31,21 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final UserService userService;
+    private final JwtTokenProvider jwtTokenProvider;
+
+    /**
+     * Register a new admin.
+     *
+     * @param request admin registration details
+     * @return registered admin information
+     */
+    @PostMapping("/register/admin")
+    public ResponseEntity<ApiResponse<UserResponse>> registerAdmin(
+            @Valid @RequestBody AdminRegistrationRequest request) {
+        UserResponse user = userService.registerAdmin(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.success("Admin registered successfully", user));
+    }
 
     /**
      * Register a new customer.
@@ -59,19 +76,24 @@ public class AuthController {
     }
 
     /**
-     * User login.
-     * TODO: Generate JWT token in production.
+     * User login with JWT token generation.
      *
      * @param request login credentials
-     * @return authentication response with user details and token
+     * @return authentication response with user details and JWT token
      */
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(
             @Valid @RequestBody LoginRequest request) {
         User user = userService.authenticateUser(request);
 
-        // TODO: Generate actual JWT token
-        String mockToken = "mock-jwt-token-" + user.getId();
+        // Generate real JWT token
+        String accessToken = jwtTokenProvider.generateToken(
+                user.getId(),
+                user.getEmail(),
+                user.getRole().name()
+        );
+
+        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId());
 
         // Map User to UserResponse with ALL fields including provider-specific ones
         UserResponse userResponse = UserResponse.builder()
@@ -97,9 +119,10 @@ public class AuthController {
                 .build();
 
         AuthResponse authResponse = AuthResponse.builder()
-                .token(mockToken)
+                .token(accessToken)
+                .refreshToken(refreshToken)
                 .tokenType("Bearer")
-                .expiresIn(86400000L) // 24 hours
+                .expiresIn(86400000L) // 24 hours from config
                 .user(userResponse)
                 .build();
 
@@ -108,28 +131,59 @@ public class AuthController {
 
     /**
      * Logout endpoint.
-     * Currently does nothing as JWT is stateless.
-     * In production, could invalidate token or add to blacklist.
+     * JWT is stateless, so logout is client-side (remove token).
+     * In production, consider adding token to blacklist for extra security.
      *
      * @return success response
      */
     @PostMapping("/logout")
     public ResponseEntity<ApiResponse<String>> logout() {
-        return ResponseEntity.ok(ApiResponse.success("Logout successful", "Logged out"));
+        // Client should remove token from localStorage
+        return ResponseEntity.ok(ApiResponse.success("Logout successful", "Token should be removed from client"));
     }
 
     /**
-     * Verify token (placeholder).
-     * TODO: Implement JWT token verification.
+     * Verify JWT token validity.
      *
-     * @param token JWT token
+     * @param token JWT token (without "Bearer " prefix)
      * @return token validation response
      */
     @GetMapping("/verify")
     public ResponseEntity<ApiResponse<Boolean>> verifyToken(@RequestParam String token) {
-        // TODO: Implement JWT verification
-        boolean isValid = token != null && token.startsWith("mock-jwt-token-");
+        boolean isValid = jwtTokenProvider.validateToken(token);
         return ResponseEntity.ok(ApiResponse.success("Token verification completed", isValid));
     }
-}
 
+    /**
+     * Refresh access token using refresh token.
+     *
+     * @param refreshToken refresh token
+     * @return new access token
+     */
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<AuthResponse>> refreshToken(@RequestParam String refreshToken) {
+        if (!jwtTokenProvider.validateToken(refreshToken)) {
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Invalid refresh token", HttpStatus.UNAUTHORIZED.value()));
+        }
+
+        Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+        User user = userService.getUserEntityById(userId);
+
+        String newAccessToken = jwtTokenProvider.generateToken(
+                user.getId(),
+                user.getEmail(),
+                user.getRole().name()
+        );
+
+        AuthResponse authResponse = AuthResponse.builder()
+                .token(newAccessToken)
+                .refreshToken(refreshToken)
+                .tokenType("Bearer")
+                .expiresIn(86400000L)
+                .build();
+
+        return ResponseEntity.ok(ApiResponse.success("Token refreshed successfully", authResponse));
+    }
+}

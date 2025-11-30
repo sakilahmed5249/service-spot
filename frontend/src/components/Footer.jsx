@@ -26,7 +26,7 @@ export default function Footer() {
   const categories = ['Plumbing', 'Electrical', 'Cleaning', 'Carpentry', 'Painting'];
 
   return (
-    <footer className="bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white mt-20 border-t border-white/10">
+    <footer className="bg-gradient-to-br from-gray-950 via-gray-900 to-gray-950 text-white border-t border-white/10">
 
       {/* Main Footer */}
       <div className="container mx-auto px-4 py-16">
@@ -163,7 +163,7 @@ export default function Footer() {
           <p className="text-gray-400 text-sm">&copy; {year} Service-Spot. All rights reserved.</p>
 
           <p className="text-gray-400 text-sm flex items-center gap-2">
-            Made with 
+            Made with
             <Heart size={16} className="text-red-500 animate-pulse" />
             for connecting people
           </p>

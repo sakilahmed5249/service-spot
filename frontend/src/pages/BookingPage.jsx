@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Calendar as CalIcon, Clock, DollarSign, User, ChevronLeft, ChevronRight } from 'lucide-react';
-import { bookingAPI, availabilityAPI } from '../services/api';
+import { bookingAPI, specificAvailabilityAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { formatCurrency, formatDate, formatTime } from '../utils/constants';
+import { formatCurrency, formatDate } from '../utils/constants';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 /**
@@ -37,67 +37,51 @@ function CalendarMonth({ year, month, providerId, serviceId, selectedDate, onSel
     setError('');
     setAvailability({});
     try {
-      let res;
-      // try common helper names
-      if (typeof availabilityAPI.getMonth === 'function') {
-        res = await availabilityAPI.getMonth({ providerId, serviceId, year: y, month: m + 1 }); // month 1-12
-      } else if (typeof availabilityAPI.getAvailability === 'function') {
-        res = await availabilityAPI.getAvailability({ providerId, serviceId, year: y, month: m + 1 });
-      } else if (typeof availabilityAPI.fetch === 'function') {
-        res = await availabilityAPI.fetch(`/availability?providerId=${providerId}&serviceId=${serviceId}&year=${y}&month=${m + 1}`);
-      } else if (typeof availabilityAPI.getSlots === 'function') {
-        // fallback: call getSlots for each day (avoid if extreme) — here we won't poll per-day to keep efficient
-        res = null;
-      } else {
-        throw new Error('availabilityAPI not implemented');
-      }
+      // Calculate month date range
+      const startDate = new Date(y, m, 1).toISOString().split('T')[0];
+      const endDate = new Date(y, m + 1, 0).toISOString().split('T')[0];
 
-      const raw = res?.data ?? res;
-      // normalize into set/dictionary
+      // Fetch provider's specific availability for this month
+      const res = await specificAvailabilityAPI.getAvailableDates(providerId, startDate, endDate);
+      const availableDates = res?.data?.data || res?.data || [];
+
+      console.log('Provider specific availability (dates):', availableDates);
+
+      // Build map of available dates
       const map = {};
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
 
-      if (!raw) {
-        // nothing
-      } else if (Array.isArray(raw)) {
-        // array of dates or objects
-        raw.forEach((r) => {
-          if (typeof r === 'string') {
-            map[r] = { count: 1, available: true };
-          } else if (r?.date) {
-            const d = r.date;
-            const slots = r.slots ?? r.count ?? (Array.isArray(r.slots) ? r.slots.length : undefined);
-            map[d] = { count: Array.isArray(r.slots) ? r.slots.length : (r.count ?? (slots ? slots : 1)), available: (r.available !== false) };
-          }
-        });
-      } else if (typeof raw === 'object') {
-        // maybe { dates: ['2025-11-28'] } or { availability: { '2025-11-28': {...} } }
-        if (Array.isArray(raw.dates)) {
-          raw.dates.forEach(d => map[d] = { count: 1, available: true });
+      // Mark each available date
+      availableDates.forEach(dateStr => {
+        const date = new Date(dateStr);
+        date.setHours(0, 0, 0, 0);
+
+        // Skip past dates
+        if (date >= today) {
+          map[dateStr] = {
+            count: 1, // Will be updated with actual slot count
+            available: true,
+            hasExplicitSlots: true,
+            slots: []
+          };
         }
-        if (raw.availability && typeof raw.availability === 'object') {
-          Object.entries(raw.availability).forEach(([d, v]) => {
-            if (typeof v === 'number') map[d] = { count: v, available: v > 0 };
-            else if (Array.isArray(v.slots ?? v)) map[d] = { count: (v.slots ?? v).length, available: (v.slots ?? v).length > 0 };
-            else map[d] = { count: (v.count ?? 1), available: v.available !== false };
-          });
-        }
-        // maybe shape { '2025-11-28': ['10:00','11:00'] }
-        else {
-          Object.entries(raw).forEach(([k, v]) => {
-            if (Array.isArray(v)) map[k] = { count: v.length, available: v.length > 0 };
-            else if (typeof v === 'object' && (v.slots || v.count)) map[k] = { count: v.slots ? v.slots.length : (v.count || 0), available: (v.slots ? v.slots.length > 0 : (v.available !== false)) };
-          });
-        }
+      });
+
+      // If no specific dates, show message
+      if (availableDates.length === 0) {
+        setError('Provider has not set any availability for this month. Please contact the provider.');
       }
 
       setAvailability(map);
     } catch (err) {
       console.error('Calendar fetch error', err);
-      setError('Could not load availability for this month.');
+      setError('Could not load provider availability. Please try again later.');
+      setAvailability({});
     } finally {
       setLoading(false);
     }
-  }, [providerId, serviceId]);
+  }, [providerId]);
 
   useEffect(() => {
     fetchMonth(cursor.year, cursor.month);
@@ -189,33 +173,49 @@ function CalendarMonth({ year, month, providerId, serviceId, selectedDate, onSel
   };
 
   return (
-    <div className="p-4 bg-white/5 rounded-lg">
-      <div className="flex items-center justify-between mb-3">
+    <div className="p-5 bg-gradient-to-br from-indigo-500/10 via-purple-500/10 to-pink-500/10 rounded-xl border border-white/10 shadow-xl backdrop-blur-sm">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <CalIcon size={18} className="text-primary" />
+          <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
+            <CalIcon size={20} className="text-white" />
+          </div>
           <div>
-            <div className="text-sm font-semibold text-white">
+            <div className="text-base font-bold text-white">
               {new Date(cursor.year, cursor.month).toLocaleString(undefined, { month: 'long', year: 'numeric' })}
             </div>
-            <div className="text-xs text-slate-400">Pick a date to see available slots</div>
+            <div className="text-xs text-slate-300">Pick a date to see available time slots</div>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <button type="button" onClick={prevMonth} className="p-2 rounded-md hover:bg-white/5">
-            <ChevronLeft size={18} />
+          <button type="button" onClick={prevMonth} className="p-2 rounded-lg hover:bg-white/10 transition bg-white/5">
+            <ChevronLeft size={18} className="text-white" />
           </button>
-          <button type="button" onClick={jumpToToday} className="p-2 rounded-md hover:bg-white/5 text-sm">Today</button>
-          <button type="button" onClick={nextMonth} className="p-2 rounded-md hover:bg-white/5">
-            <ChevronRight size={18} />
+          <button type="button" onClick={jumpToToday} className="px-3 py-2 rounded-lg hover:bg-white/10 transition bg-white/5 text-sm font-medium text-white">
+            Today
+          </button>
+          <button type="button" onClick={nextMonth} className="p-2 rounded-lg hover:bg-white/10 transition bg-white/5">
+            <ChevronRight size={18} className="text-white" />
           </button>
         </div>
       </div>
 
+      {/* Legend */}
+      <div className="mb-3 flex flex-wrap gap-3 text-xs">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded bg-gradient-to-br from-blue-500 to-pink-500"></div>
+          <span className="text-slate-300">Provider's time slots</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded bg-gradient-to-br from-emerald-400 to-teal-500"></div>
+          <span className="text-slate-300">Available for booking</span>
+        </div>
+      </div>
+
       <div className="overflow-x-auto">
-        <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-400 mb-2">
+        <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-300 mb-3">
           {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
-            <div key={d} className="py-1">{d}</div>
+            <div key={d} className="py-2 bg-white/5 rounded">{d}</div>
           ))}
         </div>
 
@@ -231,13 +231,25 @@ function CalendarMonth({ year, month, providerId, serviceId, selectedDate, onSel
             const isSelected = cell.iso === selectedDate;
             const info = availability[cell.iso];
             const available = info?.available || false;
+            const hasExplicitSlots = info?.hasExplicitSlots || false;
             const count = info?.count ?? 0;
 
             // style variants
-            const base = `p-2 rounded-lg min-h-[56px] flex flex-col items-center justify-between`;
-            const inMonthClass = cell.inMonth ? 'opacity-100' : 'opacity-40';
-            const availableClass = available ? 'bg-gradient-to-br from-blue-600 to-purple-600 text-white shadow-md' : 'bg-white/3 text-slate-300';
-            const selectedClass = isSelected ? 'ring-2 ring-offset-2 ring-primary/60' : '';
+            const base = `p-2 rounded-lg min-h-[56px] flex flex-col items-center justify-between transition-all hover:scale-105`;
+            const inMonthClass = cell.inMonth ? 'opacity-100' : 'opacity-30';
+
+            // Different colors for dates with explicit slots vs manual booking
+            let availableClass = 'bg-white/5 text-slate-400 hover:bg-white/10';
+            if (available && hasExplicitSlots) {
+              // Provider has set specific time slots - show vibrant gradient
+              availableClass = 'bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-white shadow-lg hover:shadow-xl';
+            } else if (available && !hasExplicitSlots) {
+              // Manual booking available - show subtle gradient
+              availableClass = 'bg-gradient-to-br from-emerald-400/60 to-teal-500/60 text-white shadow-md hover:shadow-lg';
+            }
+
+            const selectedClass = isSelected ? 'ring-4 ring-yellow-400 ring-offset-2 ring-offset-slate-900 scale-105' : '';
+            const todayClass = isToday ? 'border-2 border-yellow-300' : '';
 
             return (
               <button
@@ -245,16 +257,22 @@ function CalendarMonth({ year, month, providerId, serviceId, selectedDate, onSel
                 data-cell
                 type="button"
                 onClick={() => onSelectDate(cell.iso)}
-                disabled={!cell.inMonth}
+                disabled={!cell.inMonth || !available}
                 aria-pressed={isSelected}
-                aria-label={`${cell.iso} ${available ? `${count} slots available` : 'no slots available'}`}
-                className={`${base} ${inMonthClass} ${cell.inMonth ? (available ? availableClass : 'bg-white/6') : 'bg-transparent'} ${selectedClass} transition-all hover:scale-[1.02]`}
+                aria-label={`${cell.iso} ${available ? (hasExplicitSlots ? `${count} time slots available` : 'available for booking') : 'not available'}`}
+                className={`${base} ${inMonthClass} ${cell.inMonth ? availableClass : 'bg-transparent'} ${selectedClass} ${todayClass}`}
               >
-                <div className="text-sm font-medium">
-                  <span className={`${isToday ? 'underline' : ''}`}>{cell.date}</span>
+                <div className="text-sm font-semibold">
+                  <span>{cell.date}</span>
                 </div>
-                <div className="text-[11px]">
-                  {loading ? null : (available ? <span className="text-white/90 text-xs">{count > 1 ? `${count} slots` : 'Available'}</span> : <span className="text-slate-400">—</span>)}
+                <div className="text-[10px] font-medium">
+                  {loading ? null : available ? (
+                    hasExplicitSlots ?
+                      <span className="text-white/95">{count} slot{count > 1 ? 's' : ''}</span> :
+                      <span className="text-white/80">Open</span>
+                  ) : (
+                    <span className="text-slate-500">—</span>
+                  )}
                 </div>
               </button>
             );
@@ -278,7 +296,16 @@ export default function BookingPage() {
 
   const { providerId, providerName, service } = location.state || {};
 
-  const [bookingData, setBookingData] = useState({ date: '', time: '', notes: '' });
+  const [bookingData, setBookingData] = useState({
+    date: '',
+    time: '',
+    notes: '',
+    serviceDoorNo: '',
+    serviceAddressLine: '',
+    serviceCity: '',
+    serviceState: '',
+    servicePincode: ''
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -337,41 +364,39 @@ export default function BookingPage() {
 
     async function fetchSlots() {
       try {
-        let res;
-        if (typeof availabilityAPI.getSlots === 'function') {
-          res = await availabilityAPI.getSlots({ providerId, serviceId: service?.id, date });
-        } else if (typeof availabilityAPI.getDay === 'function') {
-          res = await availabilityAPI.getDay({ providerId, serviceId: service?.id, date });
-        } else if (typeof availabilityAPI.fetch === 'function') {
-          res = await availabilityAPI.fetch(`/availability/slots?providerId=${providerId}&serviceId=${service?.id}&date=${date}`);
-        } else {
-          throw new Error('availabilityAPI.getSlots not implemented');
+        console.log('Fetching time slots for:', { date, providerId });
+
+        // Fetch provider's specific time slots for this date
+        const res = await specificAvailabilityAPI.getTimeSlots(providerId, date);
+        const timeSlots = res?.data?.data || res?.data || [];
+
+        console.log('Available time slots response:', timeSlots);
+
+        if (timeSlots.length === 0) {
+          if (active) {
+            setSlots([]);
+            setSlotsLoading(false);
+            setSlotsError('No time slots available for this date. Please select another date.');
+            setAllowManualTime(false); // Don't allow manual time - provider must set specific slots
+          }
+          return;
         }
 
-        const raw = res?.data ?? res;
-        let normalized = [];
-
-        if (Array.isArray(raw)) {
-          if (raw.length && typeof raw[0] === 'string') normalized = raw.map(t => ({ time: t, available: true }));
-          else normalized = raw.map((r) => ({ time: r.time ?? r.slot ?? '', available: r.available !== false })).filter(s => s.time);
-        } else if (raw?.slots) {
-          normalized = (raw.slots || []).map(s => ({ time: s.time ?? s, available: s.available !== false }));
-        } else if (raw?.data && Array.isArray(raw.data)) {
-          normalized = raw.data.map(s => ({ time: s.time ?? s, available: s.available !== false }));
-        } else {
-          // other shapes
-          normalized = [];
-        }
+        // Convert to time slot format
+        const normalized = timeSlots.map(slot => ({
+          time: slot.startTime.substring(0, 5), // "10:00:00" -> "10:00"
+          available: slot.isAvailable && !slot.availableSlots || slot.availableSlots > 0,
+          slotId: slot.id,
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          availableSlots: slot.availableSlots,
+          maxBookings: slot.maxBookings
+        }));
 
         if (active) {
           setSlots(normalized);
           setSlotsLoading(false);
-          if (!normalized.length) {
-            setSlotsError('No predefined slots for this date. You may enter a preferred time manually.');
-            setAllowManualTime(true);
-          } else {
-            setSlotsError('');
-          }
+          setSlotsError('');
         }
       } catch (err) {
         console.error('Error fetching slots', err);
@@ -410,25 +435,57 @@ export default function BookingPage() {
   };
 
   async function submitBooking() {
-    const { date, time, notes } = bookingData;
+    const { date, time, notes, serviceDoorNo, serviceAddressLine, serviceCity, serviceState, servicePincode } = bookingData;
+
+    // Validate required fields
+    if (!serviceDoorNo?.trim()) {
+      setError('Please enter the door/flat number');
+      return;
+    }
+    if (!serviceAddressLine?.trim()) {
+      setError('Please enter the service address');
+      return;
+    }
+    if (!serviceCity?.trim()) {
+      setError('Please enter the city');
+      return;
+    }
+    if (!serviceState?.trim()) {
+      setError('Please enter the state');
+      return;
+    }
+    if (!servicePincode || servicePincode.length !== 6) {
+      setError('Please enter a valid 6-digit pincode');
+      return;
+    }
+
     const validated = validateDateTime(date, time);
     if (!validated.ok) {
       setError(validated.message);
       return;
     }
 
-    const slotStartIso = toISOStringLocal(validated.dateObj);
+    // Split the datetime into date and time for backend
+    const bookingDate = validated.dateObj.toISOString().split('T')[0]; // YYYY-MM-DD
+    const timeStr = time.padEnd(8, ':00'); // HH:mm or HH:mm:ss
+
     const payload = {
-      serviceItemId: service.id,
-      providerId,
       customerId: user.id,
-      slotStart: slotStartIso,
-      notes: notes?.trim() || '',
-      status: 'PENDING',
+      serviceListingId: service.id,
+      bookingDate: bookingDate,
+      bookingTime: timeStr,
+      durationMinutes: service.durationMinutes || 60,
+      serviceDoorNo: serviceDoorNo.trim(),
+      serviceAddressLine: serviceAddressLine.trim(),
+      serviceCity: serviceCity.trim(),
+      serviceState: serviceState.trim(),
+      servicePincode: parseInt(servicePincode, 10),
+      customerNotes: notes?.trim() || '',
+      paymentMethod: 'Cash' // Default to Cash, can be made selectable later
     };
 
     const confirmed = window.confirm(
-      `Confirm booking with ${providerName}\n\nService: ${service.title}\nWhen: ${formatDate(validated.dateObj.toISOString())} ${formatTime(validated.dateObj.toISOString().split('T')[1] || '')}\nPrice: ${formatCurrency(service.basePrice)}`
+      `Confirm booking with ${providerName}\n\nService: ${service.title}\nWhen: ${formatDate(bookingDate)} ${time}\nLocation: ${serviceDoorNo}, ${serviceAddressLine}, ${serviceCity}\nPrice: ${formatCurrency(service.price || service.basePrice || 0)}`
     );
     if (!confirmed) return;
 
@@ -464,55 +521,72 @@ export default function BookingPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Book Service</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900/20 to-slate-900">
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          {/* Page Header */}
+          <div className="mb-8 text-center">
+            <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Book Your Service
+            </h1>
+            <p className="text-slate-400">Select your preferred date, time, and enter service location</p>
+          </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Booking Summary */}
-          <aside className="card bg-white/90 border border-white/10">
-            <h2 className="text-xl font-bold mb-4">Booking Summary</h2>
-            <div className="space-y-4">
-              <div>
-                <p className="text-sm text-gray-500">Provider</p>
-                <p className="font-semibold flex items-center">
-                  <User size={18} className="mr-2 text-primary" />
-                  {providerName}
-                </p>
+          <div className="grid lg:grid-cols-5 gap-6">
+            {/* Booking Summary - Left Sidebar */}
+            <aside className="lg:col-span-2 card bg-gradient-to-br from-blue-500/10 to-purple-500/10 border-2 border-white/20 shadow-2xl backdrop-blur-md">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
+                  <User size={20} className="text-white" />
+                </div>
+                <h2 className="text-xl font-bold text-white">Booking Summary</h2>
               </div>
-
-              <div>
-                <p className="text-sm text-gray-500">Service</p>
-                <p className="font-semibold">{service.title}</p>
-                {service.description && <p className="text-sm text-gray-600 mt-1">{service.description}</p>}
-              </div>
-
-              <div className="border-t pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="flex items-center text-gray-700">
-                    <DollarSign size={18} className="mr-1 text-primary" />
-                    Base Price
-                  </span>
-                  <span className="font-semibold">{formatCurrency(service.basePrice)}</span>
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Provider</p>
+                  <p className="font-bold text-white text-lg">{providerName}</p>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center text-gray-700">
-                    <Clock size={18} className="mr-1 text-primary" />
-                    Duration
-                  </span>
-                  <span className="font-semibold">{service.durationMinutes} min</span>
+                <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+                  <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Service</p>
+                  <p className="font-bold text-white text-lg">{service.title}</p>
+                  {service.description && (
+                    <p className="text-sm text-slate-300 mt-2 line-clamp-2">{service.description}</p>
+                  )}
+                </div>
+
+                <div className="border-t border-white/10 pt-4 space-y-3">
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-gradient-to-r from-green-500/20 to-emerald-500/20 border border-green-500/30">
+                    <span className="flex items-center text-white font-medium">
+                      <DollarSign size={20} className="mr-2 text-green-400" />
+                      Base Price
+                    </span>
+                    <span className="font-bold text-xl text-green-400">
+                      {formatCurrency(service.price || service.basePrice || 0)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+                    <span className="flex items-center text-slate-300">
+                      <Clock size={18} className="mr-2 text-blue-400" />
+                      Duration
+                    </span>
+                    <span className="font-semibold text-white">{service.durationMinutes || 60} minutes</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </aside>
+            </aside>
 
-          {/* Booking Form + Calendar */}
-          <section className="space-y-4">
-            <div className="card p-4">
-              <div className="flex flex-col md:flex-row gap-4">
+            {/* Booking Form + Calendar - Main Content */}
+            <section className="lg:col-span-3 space-y-6">
+            {/* Calendar Section */}
+            <div className="card bg-gradient-to-br from-slate-800/50 to-slate-900/50 border-2 border-white/10 shadow-2xl backdrop-blur-md p-6">
+              <h2 className="text-2xl font-bold mb-4 text-white flex items-center gap-2">
+                <CalIcon className="text-purple-400" size={24} />
+                Choose Date & Time
+              </h2>
+              <div className="flex flex-col xl:flex-row gap-6">
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold mb-2">Choose a Date</h2>
                   <CalendarMonth
                     year={new Date().getFullYear()}
                     month={new Date().getMonth()}
@@ -523,61 +597,97 @@ export default function BookingPage() {
                   />
                 </div>
 
-                <div className="w-full md:w-80">
-                  <h3 className="text-lg font-semibold mb-2">Selected</h3>
-                  <div className="card p-3">
-                    <p className="text-sm text-slate-500">Date</p>
-                    <p className="font-semibold">{bookingData.date ? formatDate(bookingData.date) : 'No date selected'}</p>
+                <div className="xl:w-80">
+                  <div className="p-5 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 border-2 border-purple-500/30 shadow-xl">
+                    <h3 className="text-lg font-bold mb-3 text-white flex items-center gap-2">
+                      <Clock className="text-purple-400" size={20} />
+                      Selected Booking
+                    </h3>
 
-                    <div className="mt-4">
-                      <p className="text-sm text-slate-500">Time</p>
+                    <div className="space-y-4">
+                      {/* Date Display */}
+                      <div className="p-3 rounded-lg bg-black/20 border border-white/10">
+                        <p className="text-xs text-slate-400 uppercase tracking-wide mb-1">Date</p>
+                        <p className="font-bold text-white">
+                          {bookingData.date ? formatDate(bookingData.date) : 'No date selected'}
+                        </p>
+                      </div>
 
-                      {/* If slots available for selected date */}
-                      {slotsLoading ? (
-                        <div className="mt-2"><LoadingSpinner size="sm" /></div>
-                      ) : (slots && slots.length > 0 && !allowManualTime) ? (
-                        <div className="grid grid-cols-2 gap-2 mt-2">
-                          {slots.map((s) => {
-                            const isSelected = bookingData.time === s.time;
-                            return (
-                              <button
-                                key={s.time}
-                                type="button"
-                                onClick={() => chooseSlot(s.time, s.available)}
-                                disabled={!s.available}
-                                className={`px-3 py-2 rounded-md text-sm transition ${s.available ? (isSelected ? 'bg-gradient-to-r from-primary to-accent text-white' : 'bg-white/6 hover:bg-white/10') : 'bg-gray-800 text-gray-400 cursor-not-allowed line-through'}`}
-                                aria-pressed={isSelected}
-                              >
-                                {s.time}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div className="mt-2">
-                          <input
-                            id="time"
-                            name="time"
-                            type="time"
-                            value={bookingData.time}
-                            onChange={handleChange}
-                            className="input-field"
-                            disabled={!bookingData.date}
-                            aria-required
-                          />
-                          <div className="mt-2 text-xs text-slate-500">
-                            {slotsError ? slotsError : (!bookingData.date ? 'Select a date to see slots' : 'No slots — enter a preferred time')}
+                      {/* Time Selection */}
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase tracking-wide mb-2">Time</p>
+
+                        {/* If slots available for selected date */}
+                        {slotsLoading ? (
+                          <div className="mt-2 flex justify-center"><LoadingSpinner size="sm" /></div>
+                        ) : (slots && slots.length > 0 && !allowManualTime) ? (
+                          <div className="grid grid-cols-2 gap-2">
+                            {slots.map((s) => {
+                              const isSelected = bookingData.time === s.time;
+                              return (
+                                <button
+                                  key={s.time}
+                                  type="button"
+                                  onClick={() => chooseSlot(s.time, s.available)}
+                                  disabled={!s.available}
+                                  className={`px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                                    s.available ? (
+                                      isSelected ?
+                                        'bg-gradient-to-r from-yellow-400 to-orange-500 text-black shadow-lg scale-105' :
+                                        'bg-gradient-to-r from-blue-500 to-purple-600 text-white hover:scale-105 shadow-md'
+                                    ) :
+                                    'bg-gray-800 text-gray-500 cursor-not-allowed line-through opacity-50'
+                                  }`}
+                                  aria-pressed={isSelected}
+                                >
+                                  {s.time}
+                                </button>
+                              );
+                            })}
                           </div>
+                        ) : (
+                          <div>
+                            <input
+                              id="time"
+                              name="time"
+                              type="time"
+                              value={bookingData.time}
+                              onChange={handleChange}
+                              className="input-field w-full bg-black/30 border-white/20 text-white"
+                              disabled={!bookingData.date}
+                              aria-required
+                            />
+                            <div className="mt-2 text-xs text-slate-400 bg-blue-500/10 border border-blue-500/30 rounded p-2">
+                              {slotsError ? slotsError : (!bookingData.date ? '👆 Select a date first' : '⏰ Enter your preferred time')}
+                            </div>
 
-                          {slots && slots.length > 0 && (
-                            <button type="button" onClick={() => setAllowManualTime(false)} className="btn-ghost mt-2 text-sm">Show available slots</button>
-                          )}
-                        </div>
-                      )}
+                            {slots && slots.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => setAllowManualTime(false)}
+                                className="btn-ghost mt-2 text-sm w-full"
+                              >
+                                Show available slots
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
-                      <div className="mt-4">
-                        <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">Additional Notes (Optional)</label>
-                        <textarea id="notes" name="notes" rows="3" value={bookingData.notes} onChange={handleChange} className="input-field" placeholder="Any requirements..." />
+                      {/* Notes */}
+                      <div>
+                        <label htmlFor="notes" className="block text-xs text-slate-400 uppercase tracking-wide mb-2">
+                          Additional Notes (Optional)
+                        </label>
+                        <textarea
+                          id="notes"
+                          name="notes"
+                          rows="3"
+                          value={bookingData.notes}
+                          onChange={handleChange}
+                          className="input-field w-full bg-black/30 border-white/20 text-white placeholder-slate-500"
+                          placeholder="Any special requirements..."
+                        />
                       </div>
                     </div>
                   </div>
@@ -585,30 +695,184 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* submit card */}
-            <form onSubmit={handleSubmit} className="card p-4">
-              {error && <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">{error}</div>}
+            {/* Service Address Section */}
+            <div className="card bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border-2 border-emerald-500/30 shadow-2xl backdrop-blur-md p-6">
+              <h3 className="text-2xl font-bold mb-4 text-white flex items-center gap-2">
+                <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Service Location
+              </h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="serviceDoorNo" className="block text-sm font-semibold text-slate-300 mb-2">
+                      Door/Flat Number <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      id="serviceDoorNo"
+                      name="serviceDoorNo"
+                      type="text"
+                      value={bookingData.serviceDoorNo}
+                      onChange={handleChange}
+                      className="input-field w-full bg-black/30 border-white/20 text-white placeholder-slate-500"
+                      placeholder="e.g., 123, Flat 4B"
+                      required
+                    />
+                  </div>
 
-              <div className="pt-2 border-t flex flex-col gap-3">
-                <button type="submit" disabled={loading} ref={confirmBtnRef} className="w-full btn-primary flex items-center justify-center gap-3">
-                  {loading ? <LoadingSpinner size="sm" /> : null}
-                  <span>{loading ? 'Creating Booking...' : 'Confirm Booking'}</span>
+                  <div>
+                    <label htmlFor="servicePincode" className="block text-sm font-semibold text-slate-300 mb-2">
+                      Pincode <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      id="servicePincode"
+                      name="servicePincode"
+                      type="text"
+                      value={bookingData.servicePincode}
+                      onChange={handleChange}
+                      className="input-field w-full bg-black/30 border-white/20 text-white placeholder-slate-500"
+                      placeholder="e.g., 560001"
+                      maxLength="6"
+                      pattern="[0-9]{6}"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="serviceAddressLine" className="block text-sm font-semibold text-slate-300 mb-2">
+                    Address Line <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    id="serviceAddressLine"
+                    name="serviceAddressLine"
+                    type="text"
+                    value={bookingData.serviceAddressLine}
+                    onChange={handleChange}
+                    className="input-field w-full bg-black/30 border-white/20 text-white placeholder-slate-500"
+                    placeholder="Street, Area, Landmark"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="serviceCity" className="block text-sm font-semibold text-slate-300 mb-2">
+                      City <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      id="serviceCity"
+                      name="serviceCity"
+                      type="text"
+                      value={bookingData.serviceCity}
+                      onChange={handleChange}
+                      className="input-field w-full bg-black/30 border-white/20 text-white placeholder-slate-500"
+                      placeholder="e.g., Bangalore"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label htmlFor="serviceState" className="block text-sm font-semibold text-slate-300 mb-2">
+                      State <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      id="serviceState"
+                      name="serviceState"
+                      type="text"
+                      value={bookingData.serviceState}
+                      onChange={handleChange}
+                      className="input-field w-full bg-black/30 border-white/20 text-white placeholder-slate-500"
+                      placeholder="e.g., Karnataka"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* submit card */}
+            <form onSubmit={handleSubmit} className="card bg-gradient-to-br from-orange-500/10 to-red-500/10 border-2 border-orange-500/30 shadow-2xl backdrop-blur-md p-6">
+              {error && (
+                <div className="bg-red-500/20 border-2 border-red-400 text-red-200 px-5 py-4 rounded-xl mb-6 font-semibold flex items-center gap-3">
+                  <svg className="w-6 h-6 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                  {error}
+                </div>
+              )}
+
+              <div className="flex flex-col gap-4">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  ref={confirmBtnRef}
+                  className="w-full py-4 bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 hover:from-green-600 hover:via-emerald-600 hover:to-teal-600 text-white font-bold text-lg rounded-xl shadow-2xl hover:shadow-green-500/50 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center justify-center gap-3"
+                >
+                  {loading ? (
+                    <>
+                      <LoadingSpinner size="sm" />
+                      <span>Creating Booking...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>Confirm Booking</span>
+                    </>
+                  )}
                 </button>
 
-                <button type="button" onClick={() => navigate(-1)} className="w-full btn-secondary">Cancel</button>
+                <button
+                  type="button"
+                  onClick={() => navigate(-1)}
+                  className="w-full py-3 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl border-2 border-white/20 transition-all duration-300 hover:scale-105"
+                >
+                  Cancel
+                </button>
               </div>
             </form>
-          </section>
-        </div>
+            </section>
+          </div>
 
-        <div className="card mt-6 bg-white/95">
-          <h3 className="font-semibold mb-2">Important Information</h3>
-          <ul className="text-sm text-gray-700 space-y-1">
-            <li>• Your booking request will be sent to the provider for confirmation.</li>
-            <li>• The provider may suggest alternative times based on availability.</li>
-            <li>• You will be notified once the provider confirms your booking.</li>
-            <li>• Cancellation policy may apply after confirmation.</li>
+          {/* Important Information Card */}
+          <div className="card mt-6 bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-2 border-blue-500/30 shadow-xl backdrop-blur-md">
+            <div className="flex items-center gap-3 mb-4">
+              <svg className="w-6 h-6 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              <h3 className="font-bold text-lg text-white">Important Information</h3>
+            </div>
+            <ul className="text-sm text-slate-300 space-y-2.5">
+            <li className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Your booking request will be sent to the provider for confirmation.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>The provider may suggest alternative times based on availability.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>You will be notified once the provider confirms your booking.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <svg className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Cancellation policy may apply after confirmation.</span>
+            </li>
           </ul>
+          </div>
         </div>
       </div>
     </div>

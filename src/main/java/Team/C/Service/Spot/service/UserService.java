@@ -1,5 +1,6 @@
 package Team.C.Service.Spot.service;
 
+import Team.C.Service.Spot.dto.request.AdminRegistrationRequest;
 import Team.C.Service.Spot.dto.request.CustomerRegistrationRequest;
 import Team.C.Service.Spot.dto.request.LoginRequest;
 import Team.C.Service.Spot.dto.request.ProviderRegistrationRequest;
@@ -14,10 +15,19 @@ import java.util.List;
  * Defines business logic for user management including registration, authentication, and updates.
  *
  * @author Team C
- * @version 3.0
- * @since 2025-11-28
+ * @version 4.0
+ * @since 2025-11-29
  */
 public interface UserService {
+
+    /**
+     * Register a new admin.
+     *
+     * @param request admin registration details
+     * @return UserResponse DTO with created admin information
+     * @throws IllegalArgumentException if email already exists
+     */
+    UserResponse registerAdmin(AdminRegistrationRequest request);
 
     /**
      * Register a new customer.

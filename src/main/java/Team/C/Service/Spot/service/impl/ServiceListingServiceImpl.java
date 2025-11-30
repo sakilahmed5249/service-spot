@@ -323,14 +323,14 @@ public class ServiceListingServiceImpl implements ServiceListingService {
             throw new IllegalArgumentException("You do not have permission to delete this listing");
         }
 
-        // Soft delete - set active to false
-        listing.setActive(false);
-        listingRepository.save(listing);
+        // Hard delete - permanently remove from database
+        listingRepository.deleteById(id);
 
-        // For hard delete, uncomment:
-        // listingRepository.deleteById(id);
+        // Note: Soft delete option (commented out for reference):
+        // listing.setActive(false);
+        // listingRepository.save(listing);
 
-        log.info("Successfully deleted service listing with ID: {}", id);
+        log.info("Successfully hard deleted service listing with ID: {}", id);
     }
 
     /**

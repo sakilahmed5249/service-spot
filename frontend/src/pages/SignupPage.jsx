@@ -210,11 +210,11 @@ const SignupPage = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] py-12 px-4 bg-[var(--bg)]">
+    <div className="min-h-[calc(100vh-4rem)] py-12 px-4 bg-gray-50">
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-        {/* Left visual column (illustration + benefits) */}
+        {/* Left visual column - Premium colored card */}
         <div className="md:col-span-5 lg:col-span-6 hidden md:block">
-          <div className="rounded-3xl overflow-hidden shadow-2xl card-glass p-6 h-full flex flex-col justify-center">
+          <div className="rounded-3xl overflow-hidden shadow-xl bg-gradient-to-br from-green-600 via-teal-600 to-cyan-700 border border-green-400/20 p-8 h-full flex flex-col justify-center">
             <Illustration className="w-full" />
             <div className="mt-6 grid grid-cols-1 gap-3">
               <div className="flex items-start gap-3">
@@ -255,22 +255,23 @@ const SignupPage = () => {
           </div>
         </div>
 
-        {/* Right form column */}
+        {/* Right form column - Premium elevated card */}
         <div className="md:col-span-7 lg:col-span-6">
-          <div className="card-glass shadow-2xl p-8 rounded-3xl">
+          <div className="bg-gradient-to-br from-slate-800 via-gray-800 to-slate-900 shadow-xl border border-gray-700/50 p-8 rounded-3xl">
             {/* Header */}
             <div className="text-center mb-6">
               <div className="feature-icon mx-auto mb-4">
                 <UserPlus size={28} />
               </div>
-              <h2 className="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-purple-600">
+              <h2 className="text-3xl md:text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400">
                 Create Account
               </h2>
-              <p className="text-slate-400 mt-2">Start your journey with ServiceSpot</p>
+              <p className="text-gray-300 mt-2">Start your journey with ServiceSpot</p>
             </div>
 
-            {/* User Type Toggle */}
-            <div className="flex gap-3 mb-6 p-1 bg-white/6 rounded-xl">
+            {/* User Type Toggle - Admin removed, only Customer and Provider can sign up */}
+            <div className="flex gap-2 mb-6 p-1 bg-gray-900/50 backdrop-blur-sm rounded-xl border border-gray-700">
+
               <button
                 type="button"
                 onClick={() => setUserType('customer')}
@@ -290,13 +291,13 @@ const SignupPage = () => {
                 onClick={() => setUserType('provider')}
                 className={`flex-1 py-3 rounded-xl font-bold transition-all duration-300 flex items-center justify-center ${
                   userType === 'provider'
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
+                    ? 'bg-gradient-to-r from-green-600 to-teal-600 text-white shadow-lg transform scale-105'
                     : 'bg-transparent text-slate-200 hover:bg-white/4'
                 }`}
                 aria-pressed={userType === 'provider'}
               >
                 <Briefcase size={18} className="mr-2" />
-                Provider
+                Service Provider
               </button>
             </div>
 

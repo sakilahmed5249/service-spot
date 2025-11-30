@@ -8,45 +8,9 @@ import {
   LogOut,
   Calendar,
   LayoutDashboard,
-  Sun,
-  Moon,
 } from 'lucide-react';
 import { MdSpaceDashboard } from 'react-icons/md';
 
-/* ThemeToggle: toggles 'theme-dark' on <html> and persists preference */
-function ThemeToggle() {
-  const [isDark, setIsDark] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ss_theme');
-      if (saved) return saved === 'dark';
-      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-    } catch {
-      return false;
-    }
-  });
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (isDark) {
-      root.classList.add('dark', 'theme-dark');
-    } else {
-      root.classList.remove('dark', 'theme-dark');
-    }
-    try { localStorage.setItem('ss_theme', isDark ? 'dark' : 'light'); } catch {}
-  }, [isDark]);
-
-  return (
-    <button
-      aria-pressed={isDark}
-      title={isDark ? 'Switch to light' : 'Switch to dark'}
-      className="w-10 h-10 rounded-lg flex items-center justify-center focus-visible:ring-4 focus-visible:ring-primary/20 transition-all hover:scale-105"
-      onClick={() => setIsDark(s => !s)}
-      aria-label="Toggle color theme"
-    >
-      {isDark ? <Sun size={18} className="text-yellow-300" /> : <Moon size={18} className="text-slate-700" />}
-    </button>
-  );
-}
 
 /* Avatar: simple initials bubble */
 const Avatar = ({ name, size = 40 }) => {
@@ -147,7 +111,7 @@ function AvatarWithMenu({ user, onLogout }) {
             <Link
               to="/profile"
               role="menuitem"
-              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/5 transition text-sm"
+              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition text-sm"
               onClick={() => setOpen(false)}
             >
               <User size={16} /> Profile
@@ -157,22 +121,43 @@ function AvatarWithMenu({ user, onLogout }) {
               <Link
                 to="/provider/dashboard"
                 role="menuitem"
-                className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/5 transition text-sm"
+                className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition text-sm"
                 onClick={() => setOpen(false)}
               >
                 <LayoutDashboard size={16} /> Dashboard
               </Link>
             )}
 
-            {(user?.role === 'customer' || user?.role === 'CUSTOMER') && (
+            {(user?.role === 'admin' || user?.role === 'ADMIN') && (
               <Link
-                to="/my-bookings"
+                to="/admin/dashboard"
                 role="menuitem"
-                className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/5 transition text-sm"
+                className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition text-sm"
                 onClick={() => setOpen(false)}
               >
-                <Calendar size={16} /> My Bookings
+                <LayoutDashboard size={16} /> Admin Dashboard
               </Link>
+            )}
+
+            {(user?.role === 'customer' || user?.role === 'CUSTOMER') && (
+              <>
+                <Link
+                  to="/customer/dashboard"
+                  role="menuitem"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition text-sm"
+                  onClick={() => setOpen(false)}
+                >
+                  <LayoutDashboard size={16} /> Dashboard
+                </Link>
+                <Link
+                  to="/my-bookings"
+                  role="menuitem"
+                  className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-white/10 transition text-sm"
+                  onClick={() => setOpen(false)}
+                >
+                  <Calendar size={16} /> My Bookings
+                </Link>
+              </>
             )}
 
             <button
@@ -261,6 +246,30 @@ const Navbar = () => {
     setIsOpen(false);
   };
 
+  const handleBrowseServices = (e) => {
+    if (!user) {
+      e.preventDefault();
+      // If not on home page, navigate there first
+      if (window.location.pathname !== '/') {
+        navigate('/', { replace: true });
+        // Wait for navigation then scroll
+        setTimeout(() => {
+          const element = document.getElementById('popular-businesses');
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      } else {
+        // Already on home page, just scroll
+        const element = document.getElementById('popular-businesses');
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+      setIsOpen(false);
+    }
+  };
+
   return (
     <nav
       className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'glass blur-md shadow-strong backdrop-blur-lg' : 'glass shadow-soft-lg'}`}
@@ -276,58 +285,63 @@ const Navbar = () => {
             </div>
             <div className="flex flex-col leading-tight">
               <span className="text-lg font-display font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">ServiceSpot</span>
-              <span className="text-xs text-slate-700 dark:text-slate-400 -mt-0.5 hidden sm:block">Local services, booked fast</span>
+              <span className="text-xs text-white -mt-0.5 hidden sm:block">Local services, booked fast</span>
             </div>
           </Link>
 
           {/* Desktop menu */}
           <div className="hidden md:flex items-center gap-6">
-            <Link to="/services" className="relative text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-primary transition-colors">
-              <span className="group">Browse Services</span>
-              <span className="absolute left-0 -bottom-1 h-0.5 w-0 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all"></span>
-            </Link>
+            {user ? (
+              <Link to="/services" className="relative text-sm font-medium text-white hover:text-primary transition-colors">
+                <span className="group">Browse Services</span>
+                <span className="absolute left-0 -bottom-1 h-0.5 w-0 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all"></span>
+              </Link>
+            ) : (
+              <a
+                href="/#popular-businesses"
+                onClick={handleBrowseServices}
+                className="relative text-sm font-medium text-white hover:text-primary transition-colors cursor-pointer"
+              >
+                <span className="group">Browse Services</span>
+                <span className="absolute left-0 -bottom-1 h-0.5 w-0 bg-gradient-to-r from-primary to-accent group-hover:w-full transition-all"></span>
+              </a>
+            )}
 
             {user ? (
               <>
                 {user.role === 'customer' && (
                   <>
-                    <Link to="/my-bookings" className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 hover:text-primary transition-colors" aria-label="My Bookings">
+                    <Link to="/my-bookings" className="flex items-center gap-2 text-sm text-white hover:text-primary transition-colors" aria-label="My Bookings">
                       <Calendar size={16} /><span>My Bookings</span>
                     </Link>
-                    <Link to="/profile" className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 hover:text-primary transition-colors" aria-label="Profile">
+                    <Link to="/profile" className="flex items-center gap-2 text-sm text-white hover:text-primary transition-colors" aria-label="Profile">
                       <User size={16} /><span>Profile</span>
                     </Link>
                   </>
                 )}
 
                 {user.role === 'provider' && (
-                  <Link to="/provider/dashboard" className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200 hover:text-primary transition-colors" aria-label="Provider dashboard">
+                  <Link to="/provider/dashboard" className="flex items-center gap-2 text-sm text-white hover:text-primary transition-colors" aria-label="Provider dashboard">
                     <LayoutDashboard size={16} /><span>Dashboard</span>
                   </Link>
                 )}
 
-                <div className="flex items-center gap-4 pl-4 border-l border-white/6">
-                  <AvatarWithMenu user={user} onLogout={handleLogout} />
-                  <div className="hidden sm:flex items-center gap-2">
-                    <ThemeToggle />
-                  </div>
-                </div>
+                <div className="flex items-center gap-4 pl-4 border-l border-gray-200">
+                  <AvatarWithMenu user={user} onLogout={handleLogout} /></div>
               </>
             ) : (
               <div className="flex items-center gap-3">
-                <Link to="/login" className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-primary transition">Login</Link>
+                <Link to="/login" className="text-sm font-medium text-white hover:text-primary transition">Login</Link>
                 <Link to="/signup" className="btn-primary text-sm">Sign Up</Link>
-                <ThemeToggle />
               </div>
             )}
           </div>
 
           {/* Mobile controls */}
           <div className="flex items-center gap-2 md:hidden">
-            <div className="mr-1"><ThemeToggle /></div>
             <button
               ref={menuButtonRef}
-              className="p-2 rounded-lg focus-visible:ring-4 focus-visible:ring-primary/20 hover:bg-white/6 transition"
+              className="p-2 rounded-lg focus-visible:ring-4 focus-visible:ring-primary/20 hover:bg-white/10 transition"
               onClick={() => setIsOpen(s => !s)}
               aria-expanded={isOpen}
               aria-controls="mobile-menu"
@@ -349,23 +363,33 @@ const Navbar = () => {
           onKeyDown={handleMobileKeyDown}
         >
           <div className="card-glass p-4 space-y-3 animate-slide-in-up">
-            <Link to="/services" className="block py-3 px-3 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-white/5" onClick={() => setIsOpen(false)}>Browse Services</Link>
+            {user ? (
+              <Link to="/services" className="block py-3 px-3 rounded-lg text-sm font-medium text-white hover:bg-white/10" onClick={() => setIsOpen(false)}>Browse Services</Link>
+            ) : (
+              <a
+                href="/#popular-businesses"
+                onClick={handleBrowseServices}
+                className="block py-3 px-3 rounded-lg text-sm font-medium text-white hover:bg-white/10 cursor-pointer"
+              >
+                Browse Services
+              </a>
+            )}
 
             {user ? (
               <>
                 {user.role === 'customer' && (
                   <>
-                    <Link to="/my-bookings" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-white/5" onClick={() => setIsOpen(false)}><Calendar size={16} /> My Bookings</Link>
-                    <Link to="/profile" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-white/5" onClick={() => setIsOpen(false)}><User size={16} /> Profile</Link>
+                    <Link to="/my-bookings" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-white hover:bg-white/10" onClick={() => setIsOpen(false)}><Calendar size={16} /> My Bookings</Link>
+                    <Link to="/profile" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-white hover:bg-white/10" onClick={() => setIsOpen(false)}><User size={16} /> Profile</Link>
                   </>
                 )}
 
                 {user.role === 'provider' && (
-                  <Link to="/provider/dashboard" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-slate-700 dark:text-slate-200 hover:bg-white/5" onClick={() => setIsOpen(false)}><LayoutDashboard size={16} /> Dashboard</Link>
+                  <Link to="/provider/dashboard" className="flex items-center gap-2 py-3 px-3 rounded-lg text-sm text-white hover:bg-white/10" onClick={() => setIsOpen(false)}><LayoutDashboard size={16} /> Dashboard</Link>
                 )}
 
-                <div className="pt-2 border-t border-white/6">
-                  <div className="flex items-center gap-3 py-3 px-3 bg-gradient-to-r from-white/3 to-white/5 rounded-lg">
+                <div className="pt-2 border-t border-white/20">
+                  <div className="flex items-center gap-3 py-3 px-3 bg-white/10 rounded-lg">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold shadow-md">
                       {String(user?.name ?? 'U').charAt(0).toUpperCase()}
                     </div>
@@ -374,16 +398,16 @@ const Navbar = () => {
                       <p className="text-xs text-slate-300 capitalize">{user?.role ?? ''}</p>
                     </div>
                   </div>
-                  <button onClick={handleLogout} className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold text-red-500 hover:bg-red-50 transition">
+                  <button onClick={handleLogout} className="mt-3 w-full flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-semibold text-red-400 hover:bg-red-500/20 transition">
                     <LogOut size={16} /> Logout
                   </button>
                 </div>
               </>
             ) : (
-              <>
-                <Link to="/login" className="block py-3 px-3 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-white/5" onClick={() => setIsOpen(false)}>Login</Link>
-                <Link to="/signup" className="block py-3 px-3 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-primary to-accent text-center" onClick={() => setIsOpen(false)}>Sign Up</Link>
-              </>
+              <div className="pt-2 border-t border-white/20 space-y-2">
+                <Link to="/login" className="block py-3 px-3 rounded-lg text-sm font-medium text-white hover:bg-white/10 text-center" onClick={() => setIsOpen(false)}>Login</Link>
+                <Link to="/signup" className="block btn-primary text-sm text-center" onClick={() => setIsOpen(false)}>Sign Up</Link>
+              </div>
             )}
           </div>
         </div>

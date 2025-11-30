@@ -178,14 +178,4 @@ ImageSlider.propTypes = {
   className: PropTypes.string,
 };
 
-ImageSlider.defaultProps = {
-  images: [],
-  autoplay: true,
-  speed: 4000,
-  transitionMs: 800,
-  height: { mobile: 320, desktop: 520 },
-  showArrows: true,
-  lazyLoad: true,
-  dots: true,
-  className: '',
-};
+// Default props removed - using default parameters in function signature instead

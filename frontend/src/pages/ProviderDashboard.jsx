@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { bookingAPI, serviceAPI } from '../services/api';
+import { bookingAPI, serviceAPI, specificAvailabilityAPI } from '../services/api';
 import {
   Calendar,
   Clock,
@@ -11,6 +11,8 @@ import {
   XCircle,
   AlertCircle,
   Plus,
+  Trash2,
+  Edit,
 } from 'lucide-react';
 import {
   formatDate,
@@ -42,28 +44,28 @@ function BookingItem({ booking, updatingId, onUpdate }) {
 
   return (
     <article
-      className="card-glass p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-start"
+      className="bg-white shadow-lg border border-gray-200 p-4 rounded-2xl flex flex-col md:flex-row gap-4 items-start"
       aria-labelledby={`booking-${booking.id}-title`}
       role="region"
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
-            <h3 id={`booking-${booking.id}-title`} className="text-lg font-semibold text-[var(--text-primary)] truncate">
+            <h3 id={`booking-${booking.id}-title`} className="text-lg font-semibold text-gray-900 truncate">
               {booking.serviceTitle}
             </h3>
-            <p className="text-sm text-slate-400 mt-1">
-              Customer: <span className="font-medium text-white">{booking.customerName}</span>
+            <p className="text-sm text-gray-600 mt-1">
+              Customer: <span className="font-medium text-gray-900">{booking.customerName}</span>
             </p>
           </div>
 
           <div className="flex flex-col items-end gap-2">
             <StatusBadge status={booking.status} />
-            <div className="text-xs text-slate-400">{formatDate(booking.slotStart)}</div>
+            <div className="text-xs text-gray-500">{formatDate(booking.slotStart)}</div>
           </div>
         </div>
 
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-slate-300">
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <Calendar size={16} className="text-primary" />
             <span>{formatDate(booking.slotStart)}</span>
@@ -75,16 +77,16 @@ function BookingItem({ booking, updatingId, onUpdate }) {
           </div>
 
           {booking.notes && (
-            <div className="sm:col-span-2 bg-white/5 p-3 rounded-md mt-2 text-sm">
-              <div className="font-medium text-sm text-white mb-1">Customer Notes</div>
-              <div className="text-sm text-slate-300">{booking.notes}</div>
+            <div className="sm:col-span-2 bg-gray-50 p-3 rounded-md mt-2 text-sm border border-gray-200">
+              <div className="font-medium text-sm text-gray-900 mb-1">Customer Notes</div>
+              <div className="text-sm text-gray-700">{booking.notes}</div>
             </div>
           )}
         </div>
 
-        <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+        <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between">
           <div className="text-lg font-bold text-primary">{formatCurrency(booking.basePrice)}</div>
-          <div className="text-xs text-slate-400">Booked on {formatDate(booking.createdAt)}</div>
+          <div className="text-xs text-gray-500">Booked on {formatDate(booking.createdAt)}</div>
         </div>
       </div>
 
@@ -145,6 +147,7 @@ const ProviderDashboard = () => {
     price: '',
     category: '',
     durationMinutes: '60',
+    availabilitySlots: [], // Array of {date, startTime, endTime, maxBookings}
   });
   const [serviceFormErrors, setServiceFormErrors] = useState({});
   const [savingService, setSavingService] = useState(false);
@@ -163,12 +166,17 @@ const ProviderDashboard = () => {
   /* Handler for Add Service button */
   const handleAddService = () => {
     setSelectedService(null);
+    const today = new Date().toISOString().split('T')[0];
     setServiceForm({
       title: '',
       description: '',
       price: '',
       category: '',
       durationMinutes: '60',
+      availabilitySlots: [
+        // Start with one empty slot
+        { date: today, startTime: '09:00', endTime: '17:00', maxBookings: '1' }
+      ],
     });
     setServiceFormErrors({});
     setShowServiceModal(true);
@@ -190,9 +198,38 @@ const ProviderDashboard = () => {
       price: service.price || service.basePrice || '',
       category: service.category?.name || service.categoryName || '',
       durationMinutes: service.durationMinutes || '60',
+      availabilitySlots: [], // Will be loaded separately if needed
     });
     setServiceFormErrors({});
     setShowServiceModal(true);
+  };
+
+  /* Availability Slot Handlers */
+  const handleAddAvailabilitySlot = () => {
+    const today = new Date().toISOString().split('T')[0];
+    setServiceForm(prev => ({
+      ...prev,
+      availabilitySlots: [
+        ...prev.availabilitySlots,
+        { date: today, startTime: '09:00', endTime: '17:00', maxBookings: '1' }
+      ]
+    }));
+  };
+
+  const handleRemoveAvailabilitySlot = (index) => {
+    setServiceForm(prev => ({
+      ...prev,
+      availabilitySlots: prev.availabilitySlots.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleAvailabilitySlotChange = (index, field, value) => {
+    setServiceForm(prev => ({
+      ...prev,
+      availabilitySlots: prev.availabilitySlots.map((slot, i) =>
+        i === index ? { ...slot, [field]: value } : slot
+      )
+    }));
   };
 
   /* Handle service form input changes */
@@ -257,16 +294,50 @@ const ProviderDashboard = () => {
 
       console.log('Submitting service data:', serviceData);
 
+      let createdServiceId = selectedService?.id;
+
       if (selectedService) {
         // Update existing service
-        await serviceAPI.update(selectedService.id, serviceData);
-        alert('Service updated successfully!');
+        await serviceAPI.update(selectedService.id, serviceData, user.id);
+        console.log('Service updated successfully');
       } else {
         // Create new service - pass providerId as second parameter
-        await serviceAPI.create(serviceData, user.id);
-        alert('Service created successfully!');
+        const response = await serviceAPI.create(serviceData, user.id);
+        createdServiceId = response.data?.data?.id || response.data?.id;
+        console.log('Service created successfully with ID:', createdServiceId);
       }
 
+      // Create availability slots if any
+      if (serviceForm.availabilitySlots.length > 0 && createdServiceId) {
+        console.log('Creating availability slots for service:', createdServiceId);
+
+        for (const slot of serviceForm.availabilitySlots) {
+          // Validate slot has required fields
+          if (!slot.date || !slot.startTime || !slot.endTime) {
+            console.warn('Skipping invalid slot:', slot);
+            continue;
+          }
+
+          try {
+            const availabilityData = {
+              providerId: user.id,
+              serviceListingId: createdServiceId,
+              availableDate: slot.date,
+              startTime: slot.startTime + ':00',
+              endTime: slot.endTime + ':00',
+              maxBookings: slot.maxBookings ? parseInt(slot.maxBookings) : null,
+            };
+
+            await specificAvailabilityAPI.create(availabilityData);
+            console.log('Created availability slot:', availabilityData);
+          } catch (slotError) {
+            console.error('Error creating availability slot:', slotError);
+            // Continue with other slots even if one fails
+          }
+        }
+      }
+
+      alert(selectedService ? 'Service updated successfully!' : 'Service created successfully with availability slots!');
       setShowServiceModal(false);
       fetchDashboardData(); // Refresh the services list
     } catch (error) {
@@ -287,23 +358,66 @@ const ProviderDashboard = () => {
 
   /* Handler for Delete Service button */
   const handleDeleteService = async (serviceId) => {
-    if (!window.confirm('Are you sure you want to delete this service?')) {
+    const service = services.find(s => s.id === serviceId);
+    const serviceName = service?.title || 'this service';
+
+    console.log('🗑️ Attempting to delete service:', { serviceId, serviceName, currentServicesCount: services.length });
+
+    if (!window.confirm(`Are you sure you want to permanently delete "${serviceName}"?\n\nThis action cannot be undone and will:\n• Remove the service from your listings\n• Cancel any pending bookings for this service\n• Remove the service from customer search results`)) {
+      console.log('❌ Deletion cancelled by user (first confirmation)');
       return;
     }
 
+    // Double confirmation for critical action
+    if (!window.confirm(`FINAL CONFIRMATION: Delete "${serviceName}" permanently?`)) {
+      console.log('❌ Deletion cancelled by user (second confirmation)');
+      return;
+    }
+
+    // Store original services for rollback
+    const originalServices = [...services];
+
     try {
-      // TODO: Implement service deletion API call
-      alert(`Delete Service #${serviceId}: This will call the API to delete the service. To be implemented.`);
-      // await serviceAPI.delete(serviceId);
-      // Refresh services list
-      // fetchDashboardData();
+      // Optimistically remove from UI immediately
+      console.log('⚡ Optimistically removing service from UI...');
+      setServices(prevServices => {
+        const updated = prevServices.filter(s => s.id !== serviceId);
+        console.log('📊 Services after optimistic removal:', { before: prevServices.length, after: updated.length });
+        return updated;
+      });
+
+      // Call API to delete service
+      console.log('🌐 Calling API to delete service...');
+      const response = await serviceAPI.delete(serviceId, user.id);
+      console.log('✅ API delete successful:', response);
+
+      // Show success message
+      alert(`Service "${serviceName}" deleted successfully!`);
+
+      // Fetch fresh data to ensure sync with backend
+      console.log('🔄 Fetching fresh dashboard data...');
+      await fetchDashboardData();
+      console.log('✅ Dashboard data refreshed. New services count:', services.length);
     } catch (error) {
-      console.error('Error deleting service:', error);
-      alert('Failed to delete service. Please try again.');
+      console.error('❌ Error deleting service:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      // Restore original services on error
+      console.log('↩️ Restoring original services...');
+      setServices(originalServices);
+
+      const errorMessage = error.response?.data?.message || error.message || 'Please try again.';
+      alert(`Failed to delete service: ${errorMessage}`);
     }
   };
 
+
   const fetchDashboardData = async () => {
+    console.log('🔄 fetchDashboardData started for user:', user.id);
     setLoading(true);
     try {
       // Fetch real bookings from API
@@ -311,7 +425,37 @@ const ProviderDashboard = () => {
       try {
         if (bookingAPI?.getByUser) {
           const bookingsResponse = await bookingAPI.getByUser(user.id, 'provider');
-          fetchedBookings = bookingsResponse.data?.data || bookingsResponse.data || [];
+          const rawBookings = bookingsResponse.data?.data || bookingsResponse.data || [];
+          console.log('📦 Fetched raw bookings:', rawBookings.length, rawBookings);
+
+          // Map backend fields to frontend expected fields
+          fetchedBookings = rawBookings.map(booking => ({
+            id: booking.id,
+            bookingReference: booking.bookingReference,
+            // Combine date and time for slotStart field
+            slotStart: `${booking.bookingDate}T${booking.bookingTime || '00:00:00'}`,
+            status: booking.status,
+            // Map price field
+            basePrice: booking.totalAmount || booking.basePrice || 0,
+            // Extract service and customer names from nested objects
+            serviceTitle: booking.serviceListing?.title || booking.serviceTitle || 'Unknown Service',
+            customerName: booking.customer?.name || booking.customerName || 'Unknown Customer',
+            customerId: booking.customer?.id || booking.customerId,
+            serviceListingId: booking.serviceListing?.id || booking.serviceListingId,
+            // Notes
+            notes: booking.customerNotes || booking.notes || '',
+            // Timestamps
+            createdAt: booking.createdAt,
+            updatedAt: booking.updatedAt,
+            // Location
+            serviceCity: booking.serviceCity,
+            fullServiceAddress: booking.fullServiceAddress,
+            // Additional fields
+            durationMinutes: booking.durationMinutes,
+            paymentStatus: booking.paymentStatus,
+          }));
+
+          console.log('✅ Mapped bookings:', fetchedBookings.length, fetchedBookings);
         }
       } catch (error) {
         console.log('No bookings found or API not available:', error.message);
@@ -323,14 +467,19 @@ const ProviderDashboard = () => {
       // Fetch real services from API
       let fetchedServices = [];
       try {
+        console.log('🔍 Fetching services for provider:', user.id);
         const servicesResponse = await serviceAPI.getByProvider(user.id);
         fetchedServices = servicesResponse.data?.data || servicesResponse.data || [];
+        console.log('✅ Fetched services:', fetchedServices.length, fetchedServices);
       } catch (error) {
+        console.error('❌ Error fetching services:', error);
         console.log('No services found or API not available:', error.message);
         fetchedServices = [];
       }
 
+      console.log('📝 Setting services state with:', fetchedServices.length, 'services');
       setServices(fetchedServices);
+
 
       // compute stats from real data
       const totalBookings = fetchedBookings.length;
@@ -341,8 +490,9 @@ const ProviderDashboard = () => {
         .reduce((s, b) => s + (b.basePrice || b.price || 0), 0);
 
       setStats({ totalBookings, pendingBookings, completedBookings, totalRevenue });
+      console.log('✅ Dashboard data fetch complete');
     } catch (err) {
-      console.error('fetchDashboardData error', err);
+      console.error('❌ fetchDashboardData error', err);
       // Set empty data on error
       setBookings([]);
       setServices([]);
@@ -412,41 +562,41 @@ const ProviderDashboard = () => {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 min-h-screen bg-gray-50">
       <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-display font-bold">Provider Dashboard</h1>
-          <p className="text-sm text-slate-400 mt-1">Manage bookings, services and profile</p>
+          <h1 className="text-3xl font-display font-bold text-gray-900">Provider Dashboard</h1>
+          <p className="text-sm text-gray-600 mt-1">Manage bookings, services and profile</p>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full md:w-auto">
-          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4">
+          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-white border border-gray-200">
             <div>
-              <p className="text-sm text-slate-400">Total</p>
+              <p className="text-sm text-gray-600">Total</p>
               <p className="text-2xl font-bold text-primary">{stats.totalBookings}</p>
             </div>
             <Users size={32} className="text-primary opacity-60" />
           </div>
 
-          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4">
+          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-white border border-gray-200">
             <div>
-              <p className="text-sm text-slate-400">Pending</p>
+              <p className="text-sm text-gray-600">Pending</p>
               <p className="text-2xl font-bold text-yellow-600">{stats.pendingBookings}</p>
             </div>
             <AlertCircle size={32} className="text-yellow-500 opacity-60" />
           </div>
 
-          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4">
+          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-white border border-gray-200">
             <div>
-              <p className="text-sm text-slate-400">Completed</p>
+              <p className="text-sm text-gray-600">Completed</p>
               <p className="text-2xl font-bold text-green-600">{stats.completedBookings}</p>
             </div>
             <CheckCircle size={32} className="text-green-500 opacity-60" />
           </div>
 
-          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4">
+          <div className="card p-4 rounded-2xl glass flex items-center justify-between gap-4 bg-white border border-gray-200">
             <div>
-              <p className="text-sm text-slate-400">Revenue</p>
+              <p className="text-sm text-gray-600">Revenue</p>
               <p className="text-2xl font-bold text-purple-600">{formatCurrency(stats.totalRevenue)}</p>
             </div>
             <DollarSign size={32} className="text-purple-500 opacity-60" />
@@ -456,12 +606,12 @@ const ProviderDashboard = () => {
 
       {/* Tabs */}
       <div className="mb-6">
-        <div className="flex gap-2 border-b pb-2">
+        <div className="flex gap-2 border-b border-gray-300 pb-2">
           {['bookings', 'services', 'profile'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-5 py-3 font-semibold text-sm ${activeTab === tab ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-primary'}`}
+              className={`px-5 py-3 font-semibold text-sm ${activeTab === tab ? 'text-primary border-b-2 border-primary' : 'text-gray-600 hover:text-primary'}`}
               aria-pressed={activeTab === tab}
             >
               {tab.charAt(0).toUpperCase() + tab.slice(1)}
@@ -474,14 +624,14 @@ const ProviderDashboard = () => {
       {activeTab === 'bookings' && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Manage Bookings</h2>
-            <div className="text-sm text-slate-400">Showing <span className="text-white font-medium">{bookings.length}</span> requests</div>
+            <h2 className="text-xl font-semibold text-gray-900">Manage Bookings</h2>
+            <div className="text-sm text-gray-600">Showing <span className="text-gray-900 font-medium">{bookings.length}</span> requests</div>
           </div>
 
           {bookings.length === 0 ? (
-            <div className="card p-8 text-center">
-              <Calendar size={48} className="mx-auto text-slate-400 mb-4" />
-              <p className="text-slate-400">You have no bookings yet — share your availability to receive requests.</p>
+            <div className="card p-8 text-center bg-white border border-gray-200 rounded-2xl">
+              <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-600">You have no bookings yet — share your availability to receive requests.</p>
             </div>
           ) : (
             <div className="grid gap-4">
@@ -496,7 +646,7 @@ const ProviderDashboard = () => {
       {activeTab === 'services' && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">My Services</h2>
+            <h2 className="text-xl font-semibold text-gray-900">My Services</h2>
             <button
               onClick={handleAddService}
               className="btn-primary inline-flex items-center gap-2"
@@ -505,61 +655,90 @@ const ProviderDashboard = () => {
             </button>
           </div>
 
-          <div className="grid md:grid-cols-2 gap-4">
+          {services.length === 0 ? (
+            <div className="bg-white shadow-lg border border-gray-200 p-12 rounded-2xl text-center">
+              <div className="mx-auto w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mb-4">
+                <Plus size={32} className="text-primary" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Services Yet</h3>
+              <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                Start by adding your first service. Let customers know what you offer!
+              </p>
+              <button
+                onClick={handleAddService}
+                className="btn-primary inline-flex items-center gap-2"
+              >
+                <Plus size={16} /> Add Your First Service
+              </button>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 gap-4">{/* ...existing services grid... */}
             {services.map(s => (
-              <div key={s.id} className="card p-5 rounded-2xl">
+              <div key={s.id} className="bg-white shadow-lg border border-gray-200 p-5 rounded-2xl hover:shadow-xl transition-shadow">
                 <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h3 className="font-semibold text-lg">{s.title}</h3>
-                    <p className="text-sm text-slate-400 mt-1">{s.description}</p>
-                    <div className="mt-3 flex gap-3 text-sm">
-                      <div className="text-slate-500">Category: <span className="font-medium text-white ml-1">{s.category?.name || s.categoryName || 'Uncategorized'}</span></div>
-                      <div className="text-slate-500">Duration: <span className="font-medium text-white ml-1">{s.durationMinutes}m</span></div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-lg text-gray-900 truncate">{s.title}</h3>
+                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">{s.description}</p>
+                    <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                      <div className="text-gray-600">
+                        Category: <span className="font-medium text-gray-900 ml-1">{s.category?.name || s.categoryName || 'Uncategorized'}</span>
+                      </div>
+                      <div className="text-gray-600">
+                        Duration: <span className="font-medium text-gray-900 ml-1">{s.durationMinutes}m</span>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-2 items-end">
-                    <div className="text-lg font-bold text-primary">{formatCurrency(s.price || s.basePrice || 0)}</div>
+                  <div className="flex flex-col gap-3 items-end">
+                    <div className="text-xl font-bold text-primary whitespace-nowrap">
+                      {formatCurrency(s.price || s.basePrice || 0)}
+                    </div>
                     <div className="flex gap-2">
                       <button
                         onClick={() => handleEditService(s.id)}
-                        className="btn-secondary px-3 py-2"
+                        className="btn-secondary px-3 py-2 flex items-center gap-1.5 text-sm"
+                        title="Edit service"
                       >
-                        Edit
+                        <Edit size={16} />
+                        <span className="hidden sm:inline">Edit</span>
                       </button>
                       <button
                         onClick={() => handleDeleteService(s.id)}
-                        className="btn-danger px-3 py-2"
+                        className="bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg flex items-center gap-1.5 transition-colors text-sm"
+                        title="Delete service permanently"
                       >
-                        Delete
+                        <Trash2 size={16} />
+                        <span className="hidden sm:inline">Delete</span>
                       </button>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          )}
         </section>
       )}
 
+
       {activeTab === 'profile' && (
-        <section className="card p-6 rounded-2xl">
-          <h2 className="text-xl font-semibold mb-4">Provider Profile</h2>
+        <section className="card p-6 rounded-2xl bg-white border border-gray-200 shadow-lg">
+          <h2 className="text-xl font-semibold mb-4 text-gray-900">Provider Profile</h2>
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm text-slate-400">Business Name</label>
-              <div className="mt-1 font-medium text-white">{user?.name}</div>
+              <label className="block text-sm text-gray-600">Business Name</label>
+              <div className="mt-1 font-medium text-gray-900">{user?.name}</div>
             </div>
 
             <div>
-              <label className="block text-sm text-slate-400">Email</label>
-              <div className="mt-1 font-medium text-white">{user?.email}</div>
+              <label className="block text-sm text-gray-600">Email</label>
+              <div className="mt-1 font-medium text-gray-900">{user?.email}</div>
             </div>
 
             <div>
-              <label className="block text-sm text-slate-400">Phone</label>
-              <div className="mt-1 font-medium text-white">{user?.phone}</div>
+              <label className="block text-sm text-gray-600">Phone</label>
+              <div className="mt-1 font-medium text-gray-900">{user?.phone}</div>
             </div>
 
             <div>
@@ -568,8 +747,8 @@ const ProviderDashboard = () => {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm text-slate-400">Address</label>
-              <div className="mt-1 text-slate-200">
+              <label className="block text-sm text-gray-600">Address</label>
+              <div className="mt-1 text-gray-900">
                 {user?.doorNo}, {user?.addressLine}, {user?.city}, {user?.state} - {user?.pincode}
               </div>
             </div>
@@ -691,6 +870,105 @@ const ProviderDashboard = () => {
             />
             {serviceFormErrors.durationMinutes && (
               <p className="text-red-400 text-sm mt-1">{serviceFormErrors.durationMinutes}</p>
+            )}
+          </div>
+
+          {/* Availability Slots Section */}
+          <div className="pt-4 border-t border-white/10">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-base font-semibold text-white">Availability Schedule</h3>
+                <p className="text-xs text-slate-400 mt-1">Set specific dates and times when you're available for this service</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddAvailabilitySlot}
+                className="btn-primary text-sm py-2 px-3 flex items-center gap-1"
+              >
+                <Plus size={14} /> Add Slot
+              </button>
+            </div>
+
+            {serviceForm.availabilitySlots.length === 0 ? (
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 text-center">
+                <p className="text-sm text-yellow-300">
+                  ⚠️ No availability slots added. Customers won't see any available dates for booking!
+                </p>
+                <button
+                  type="button"
+                  onClick={handleAddAvailabilitySlot}
+                  className="mt-2 text-sm text-yellow-300 underline hover:text-yellow-200"
+                >
+                  Add your first availability slot
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {serviceForm.availabilitySlots.map((slot, index) => (
+                  <div key={index} className="bg-white/5 border border-white/10 rounded-lg p-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-4 gap-3">
+                        {/* Date */}
+                        <div>
+                          <label className="block text-xs text-slate-400 mb-1">Date *</label>
+                          <input
+                            type="date"
+                            value={slot.date}
+                            onChange={(e) => handleAvailabilitySlotChange(index, 'date', e.target.value)}
+                            className="input-field text-sm py-1.5"
+                            min={new Date().toISOString().split('T')[0]}
+                          />
+                        </div>
+
+                        {/* Start Time */}
+                        <div>
+                          <label className="block text-xs text-slate-400 mb-1">Start Time *</label>
+                          <input
+                            type="time"
+                            value={slot.startTime}
+                            onChange={(e) => handleAvailabilitySlotChange(index, 'startTime', e.target.value)}
+                            className="input-field text-sm py-1.5"
+                          />
+                        </div>
+
+                        {/* End Time */}
+                        <div>
+                          <label className="block text-xs text-slate-400 mb-1">End Time *</label>
+                          <input
+                            type="time"
+                            value={slot.endTime}
+                            onChange={(e) => handleAvailabilitySlotChange(index, 'endTime', e.target.value)}
+                            className="input-field text-sm py-1.5"
+                          />
+                        </div>
+
+                        {/* Max Bookings */}
+                        <div>
+                          <label className="block text-xs text-slate-400 mb-1">Max Bookings</label>
+                          <input
+                            type="number"
+                            value={slot.maxBookings}
+                            onChange={(e) => handleAvailabilitySlotChange(index, 'maxBookings', e.target.value)}
+                            className="input-field text-sm py-1.5"
+                            min="1"
+                            placeholder="1"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Remove Button */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveAvailabilitySlot(index)}
+                        className="mt-5 bg-red-500/20 hover:bg-red-500/30 text-red-400 p-2 rounded transition-colors"
+                        title="Remove this slot"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 

@@ -143,11 +143,11 @@ public interface UserRepository extends JpaRepository<User, Long> {
     long countByRole(Role role);
 
     /**
-     * Count verified providers.
+     * Count users by role and verification status.
      *
-     * @param role the role (PROVIDER)
-     * @param verified verification status
-     * @return number of verified providers
+     * @param role the role to count
+     * @param verified the verification status
+     * @return number of users matching criteria
      */
     long countByRoleAndVerified(Role role, Boolean verified);
 }

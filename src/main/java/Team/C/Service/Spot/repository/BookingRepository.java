@@ -173,6 +173,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
      *
      * @param provider the provider user
      * @return total number of bookings
+    /**
+     * Count bookings by provider.
+     *
+     * @param provider the provider user
+     * @return count of provider's bookings
      */
     long countByProvider(User provider);
 
@@ -186,19 +191,27 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     long countByProviderAndStatus(User provider, BookingStatus status);
 
     /**
-     * Count completed bookings by provider.
+     * Count bookings by status.
      *
-     * @param provider the provider user
-     * @param status the booking status (COMPLETED)
-     * @return number of completed bookings
+     * @param status the booking status
+     * @return count of bookings with the status
      */
-
+    long countByStatus(BookingStatus status);
 
     /**
-     * Calculate total revenue for provider.
+     * Find bookings by status after a certain date.
+     *
+     * @param status the booking status
+     * @param createdAt the date to filter from
+     * @return list of bookings
+     */
+    List<Booking> findByStatusAndCreatedAtAfter(BookingStatus status, java.time.LocalDateTime createdAt);
+
+    /**
+     * Calculate total revenue from bookings.
      *
      * @param provider the provider user
-     * @param status the booking status (COMPLETED)
+     * @param status the booking status (typically COMPLETED)
      * @return total amount from completed bookings
      */
     @Query("SELECT SUM(b.totalAmount) FROM Booking b WHERE b.provider = :provider " +

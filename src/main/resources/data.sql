@@ -12,3 +12,6 @@ INSERT INTO service_categories (name, description, icon, active, created_at, dis
 ('Painting', 'Painting services', 'PNT', true, NOW(), 10)
 ON DUPLICATE KEY UPDATE name=name;
 
+-- Note: Admin account is automatically created by AdminInitializer.java on startup
+-- Email: admin@servicespot.com
+-- Password: Admin@123

@@ -48,7 +48,7 @@ import {
   DollarSign,
   MessageSquare,
 } from 'lucide-react';
-import { providerAPI, reviewAPI, serviceAPI, availabilityAPI } from '../services/api';
+import { providerAPI, reviewAPI, serviceAPI, specificAvailabilityAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { formatCurrency } from '../utils/constants';
 import Modal from '../components/Modal';
@@ -153,26 +153,23 @@ function AvailabilityCalendar({ providerId, serviceId, onSelect }) {
     async function fetchAvailability() {
       setLoading(true);
       try {
-        if (availabilityAPI?.getAvailability) {
-          // API should return array of ISO dates ['2025-11-20', ...]
-          const res = await availabilityAPI.getAvailability(providerId, serviceId, monthStart.toISOString());
-          const list = res?.data ?? res;
-          if (!cancelled) setAvailableDates(new Set((list || []).map(d => d.split('T')[0] || d)));
-        } else {
-          // Fallback mock: randomly mark some future days as available
-          const available = new Set();
-          const today = new Date();
-          monthDays.forEach((d) => {
-            if (d && d >= today) {
-              // simple deterministic pseudo-random using date number
-              const seed = d.getDate() + monthStart.getMonth();
-              if ((seed * 37) % 5 < 2) available.add(d.toISOString().split('T')[0]);
-            }
-          });
-          if (!cancelled) setAvailableDates(available);
-        }
+        // Calculate month date range
+        const startDate = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1).toISOString().split('T')[0];
+        const endDate = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0).toISOString().split('T')[0];
+
+        // Fetch provider's specific availability dates for this month
+        const res = await specificAvailabilityAPI.getAvailableDates(providerId, startDate, endDate);
+        const availableDates = res?.data?.data || res?.data || [];
+
+        console.log('ServiceDetail - Provider specific availability:', availableDates);
+
+        // Build set of available dates
+        const available = new Set(availableDates.map(d => d.split('T')[0]));
+
+        if (!cancelled) setAvailableDates(available);
       } catch (err) {
         console.error('availability fetch error', err);
+        // On error, show no dates as available
         if (!cancelled) setAvailableDates(new Set());
       } finally {
         if (!cancelled) setLoading(false);
@@ -191,7 +188,7 @@ function AvailabilityCalendar({ providerId, serviceId, onSelect }) {
   };
 
   return (
-    <div className="card-glass p-4 rounded-2xl">
+    <div className="bg-white shadow-lg border border-gray-200 p-4 rounded-2xl">
       <div className="flex items-center justify-between mb-3">
         <div>
           <h4 className="text-sm font-semibold">Availability</h4>
@@ -602,7 +599,7 @@ export default function ServiceDetailPage() {
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <div className="card-glass p-6 rounded-2xl mb-8 grid md:grid-cols-3 gap-6 items-center">
+      <div className="bg-white shadow-lg border border-gray-200 p-6 rounded-2xl mb-8 grid md:grid-cols-3 gap-6 items-center">
         <div className="md:col-span-2">
           <h1 className="text-3xl font-display font-extrabold text-[var(--text-primary)] mb-2">{provider.name}</h1>
           <p className="text-sm text-slate-300 mb-3">Trusted local professionals — verified & reviewed</p>
@@ -653,7 +650,7 @@ export default function ServiceDetailPage() {
             <h2 className="text-2xl font-semibold mb-4">Services Offered</h2>
             <div className="grid md:grid-cols-2 gap-4">
               {services.map(service => (
-                <div key={service.id} className="card-glass p-5 rounded-2xl hover:scale-[1.02] transition-transform">
+                <div key={service.id} className="bg-white shadow-lg border border-gray-200 p-5 rounded-2xl hover:scale-[1.02] transition-transform">
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <h3 className="text-lg font-semibold text-[var(--text-primary)]">{service.title}</h3>
@@ -711,7 +708,7 @@ export default function ServiceDetailPage() {
 
         {/* Reviews column */}
         <aside className="space-y-6">
-          <div className="card-glass p-5 rounded-2xl">
+          <div className="bg-white shadow-lg border border-gray-200 p-5 rounded-2xl">
             <h3 className="text-lg font-semibold mb-3">About</h3>
             <p className="text-sm text-slate-300">Licensed & insured professionals with transparent pricing and verified reviews.</p>
             <div className="mt-4 grid grid-cols-2 gap-2">
@@ -722,7 +719,7 @@ export default function ServiceDetailPage() {
             </div>
           </div>
 
-          <div className="card-glass p-5 rounded-2xl">
+          <div className="bg-white shadow-lg border border-gray-200 p-5 rounded-2xl">
             <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
 
             {reviews.length === 0 ? (

@@ -12,7 +12,7 @@ import StarRating from '../components/StarRating';
 /*
   MyBookingsPage
   - Polished version: glass cards, accessible modal, optimistic cancel, review flow.
-  - Uses existing utilities: card-glass, btn-primary, btn-secondary, btn-danger, input-field.
+  - Uses existing utilities: bg-white shadow-lg border border-gray-200, btn-primary, btn-secondary, btn-danger, input-field.
 */
 
 const STATUS_ORDER = ['all', 'pending', 'confirmed', 'completed', 'cancelled'];
@@ -39,54 +39,70 @@ export default function MyBookingsPage() {
   async function fetchBookings() {
     setLoading(true);
     try {
-      // Replace the mock with a real API call if available:
-      // const res = await bookingAPI.getByUser(user.id, 'customer');
-      // setBookings(res.data);
-      // --- mocked data (keeps current app behavior) ---
-      const mock = [
-        {
-          id: 1,
-          serviceTitle: 'Plumbing Repair',
-          providerName: 'ABC Services',
-          providerId: 1,
-          slotStart: '2025-11-28T10:00:00',
-          status: 'CONFIRMED',
-          basePrice: 500,
-          notes: 'Kitchen sink leaking',
-          createdAt: '2025-11-25T14:30:00',
-          reviewed: false,
-        },
-        {
-          id: 2,
-          serviceTitle: 'Electrical Work',
-          providerName: 'XYZ Electricians',
-          providerId: 2,
-          slotStart: '2025-11-30T14:00:00',
-          status: 'PENDING',
-          basePrice: 800,
-          notes: 'Install new light fixtures',
-          createdAt: '2025-11-26T09:15:00',
-          reviewed: false,
-        },
-        {
-          id: 3,
-          serviceTitle: 'Home Cleaning',
-          providerName: 'Clean Pro',
-          providerId: 3,
-          slotStart: '2025-11-20T09:00:00',
-          status: 'COMPLETED',
-          basePrice: 1200,
-          notes: 'Full house cleaning',
-          createdAt: '2025-11-18T11:20:00',
-          reviewed: false,
-        },
-      ];
-      // sort by upcoming date (most recent first)
-      mock.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      setBookings(mock);
+      // Fetch real bookings from API
+      console.log('Fetching bookings for user:', user.id);
+      const res = await bookingAPI.getByUser(user.id, 'customer');
+      console.log('Bookings API response:', res);
+
+      // Extract bookings from response (handle different response structures)
+      let fetchedBookings = [];
+      if (res.data?.data) {
+        fetchedBookings = res.data.data;
+      } else if (res.data) {
+        fetchedBookings = Array.isArray(res.data) ? res.data : [];
+      }
+
+      console.log('Fetched bookings:', fetchedBookings);
+
+      // Map backend fields to frontend expected fields
+      const mappedBookings = fetchedBookings.map(booking => ({
+        id: booking.id,
+        bookingReference: booking.bookingReference,
+        // Combine date and time for slotStart field
+        slotStart: `${booking.bookingDate}T${booking.bookingTime || '00:00:00'}`,
+        status: booking.status,
+        // Map price field
+        basePrice: booking.totalAmount || booking.basePrice || 0,
+        // Extract service and provider names from nested objects
+        serviceTitle: booking.serviceListing?.title || booking.serviceTitle || 'Unknown Service',
+        providerName: booking.provider?.name || booking.providerName || 'Unknown Provider',
+        providerId: booking.provider?.id || booking.providerId,
+        serviceListingId: booking.serviceListing?.id || booking.serviceListingId,
+        // Notes
+        notes: booking.customerNotes || booking.notes || '',
+        // Timestamps
+        createdAt: booking.createdAt,
+        updatedAt: booking.updatedAt,
+        // Location
+        serviceCity: booking.serviceCity,
+        fullServiceAddress: booking.fullServiceAddress,
+        // Additional fields
+        durationMinutes: booking.durationMinutes,
+        paymentStatus: booking.paymentStatus,
+        // Review tracking
+        reviewed: booking.reviewed || false,
+      }));
+
+      // Sort by most recent first
+      mappedBookings.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+      setBookings(mappedBookings);
     } catch (err) {
       console.error('Error fetching bookings:', err);
-      // Optionally show toast/alert
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+
+      // Show empty state instead of dummy data on error
+      setBookings([]);
+
+      // Optionally show error message
+      if (err.response?.status !== 404) {
+        // Don't alert on 404 (no bookings found), just show empty state
+        console.warn('Failed to fetch bookings, showing empty state');
+      }
     } finally {
       setLoading(false);
     }
@@ -167,18 +183,18 @@ export default function MyBookingsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 bg-gray-50 min-h-screen">
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-        <h1 className="text-3xl font-bold">My Bookings</h1>
+        <h1 className="text-3xl font-bold text-gray-900">My Bookings</h1>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
-          <div className="hidden sm:flex gap-2 bg-white/3 rounded-lg p-1">
+          <div className="hidden sm:flex gap-2 bg-white rounded-lg p-1 border border-gray-200">
             {STATUS_ORDER.map(s => (
               <button
                 key={s}
                 onClick={() => setFilter(s)}
                 className={`px-3 py-2 rounded-md text-sm font-semibold transition ${
-                  filter === s ? 'bg-primary text-white' : 'text-slate-300 hover:bg-white/5'
+                  filter === s ? 'bg-primary text-white' : 'text-gray-700 hover:bg-gray-100'
                 }`}
                 aria-pressed={filter === s}
                 aria-label={`Show ${s} bookings`}
@@ -204,9 +220,9 @@ export default function MyBookingsPage() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="card-glass text-center py-12">
-          <Calendar size={48} className="mx-auto text-slate-400 mb-4" />
-          <p className="text-slate-300 text-lg mb-4">No bookings found</p>
+        <div className="bg-white shadow-lg border border-gray-200 rounded-2xl text-center py-12">
+          <Calendar size={48} className="mx-auto text-gray-400 mb-4" />
+          <p className="text-gray-600 text-lg mb-4">No bookings found</p>
           <Link to="/services" className="btn-primary inline-flex items-center gap-2">
             Browse Services
           </Link>
@@ -214,15 +230,15 @@ export default function MyBookingsPage() {
       ) : (
         <div className="space-y-4">
           {filtered.map(booking => (
-            <article key={booking.id} className="card-glass p-5 rounded-2xl shadow-md flex flex-col md:flex-row gap-4">
+            <article key={booking.id} className="bg-white shadow-lg border border-gray-200 p-5 rounded-2xl flex flex-col md:flex-row gap-4">
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-xl font-semibold">{booking.serviceTitle}</h3>
-                    <Link to={`/providers/${booking.providerId}`} className="text-slate-300 hover:underline">
+                    <h3 className="text-xl font-semibold text-gray-900">{booking.serviceTitle}</h3>
+                    <Link to={`/providers/${booking.providerId}`} className="text-primary hover:underline">
                       {booking.providerName}
                     </Link>
-                    <div className="mt-2 flex items-center gap-3 text-sm text-slate-300">
+                    <div className="mt-2 flex items-center gap-3 text-sm text-gray-600">
                       <div className="flex items-center gap-2">
                         <Calendar size={16} className="text-primary" />
                         <span>{formatDate(booking.slotStart)}</span>
@@ -242,12 +258,12 @@ export default function MyBookingsPage() {
 
                   <div className="flex flex-col items-end gap-3">
                     <StatusBadge status={booking.status} />
-                    <div className="text-lg font-bold text-slate-100">{formatCurrency(booking.basePrice)}</div>
+                    <div className="text-lg font-bold text-primary">{formatCurrency(booking.basePrice)}</div>
                   </div>
                 </div>
 
                 {/* meta */}
-                <div className="mt-3 text-xs text-slate-400">
+                <div className="mt-3 text-xs text-gray-500">
                   Booked on {formatDate(booking.createdAt)}
                 </div>
               </div>
@@ -279,7 +295,7 @@ export default function MyBookingsPage() {
                 <Link
                   to={`/providers/${booking.providerId}`}
                   className="btn-secondary text-center mt-1"
-                  aria-label={`View provider ${booking.providerId}`}
+                  aria-label={`View provider profile`}
                 >
                   View Provider
                 </Link>

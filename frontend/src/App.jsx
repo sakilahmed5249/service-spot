@@ -15,11 +15,14 @@ const LoginPage = lazy(() => import('./pages/LoginPage'));
 const SignupPage = lazy(() => import('./pages/SignupPage'));
 const ServiceListPage = lazy(() => import('./pages/ServiceListPage'));
 const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'));
+const ProviderDetailPage = lazy(() => import('./pages/ProviderDetailPage'));
 const BookingPage = lazy(() => import('./pages/BookingPage'));
 const MyBookingsPage = lazy(() => import('./pages/MyBookingsPage'));
 const CustomerProfile = lazy(() => import('./pages/CustomerProfile'));
 const ProviderProfile = lazy(() => import('./pages/ProviderProfile'));
 const ProviderDashboard = lazy(() => import('./pages/ProviderDashboard'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const CustomerDashboard = lazy(() => import('./pages/CustomerDashboard'));
 
 // Smart Profile Component that shows correct profile based on user role
 const ProfilePage = () => {
@@ -40,11 +43,12 @@ const ProfilePage = () => {
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Top chrome */}
+    <div className="min-h-screen flex flex-col bg-gray-50">
+      {/* Navbar */}
       <Navbar />
 
-      <main className="flex-1">
+      {/* Main content */}
+      <main className="flex-1 bg-gray-50">
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback />}>
             <Routes>
@@ -53,9 +57,27 @@ export default function App() {
               <Route path="/signup" element={<SignupPage />} />
               <Route path="/services" element={<ServiceListPage />} />
               <Route path="/services/:id" element={<ServiceDetailPage />} />
-              <Route path="/providers/:id" element={<ServiceDetailPage />} />
+              <Route path="/providers/:id" element={<ProviderDetailPage />} />
+
+              {/* Protected Admin Routes */}
+              <Route
+                path="/admin/dashboard"
+                element={
+                  <ProtectedRoute role="admin">
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Protected Customer Routes */}
+              <Route
+                path="/customer/dashboard"
+                element={
+                  <ProtectedRoute role="customer">
+                    <CustomerDashboard />
+                  </ProtectedRoute>
+                }
+              />
               <Route
                 path="/bookings/new"
                 element={
